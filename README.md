@@ -1,4 +1,4 @@
-# rust-sel4
+# sel4-start
 
 [![Travis](https://img.shields.io/travis/robigalia/sel4-start.svg?style=flat-square)](https://travis-ci.org/robigalia/sel4-start)
 [![Crates.io](https://img.shields.io/crates/v/sel4-start.svg?style=flat-square)](https://crates.io/crates/sel4-start)
