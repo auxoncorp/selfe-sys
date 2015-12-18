@@ -1,0 +1,28 @@
+# Copyright (c) 2015 The Robigalia Project Developers
+# Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+# http://www.apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT
+# or http://opensource.org/licenses/MIT>, at your option. All files in the
+# project carrying such notice may not be copied, modified, or distributed
+# except according to those terms.
+[package]
+name = "sel4-start"
+version = "0.0.3"
+authors = ["Corey Richardson <corey@octayn.net>"]
+description = "Crate defining the entry point to the initial thread on seL4"
+documentation = "https://doc.robigalia.org/sel4_start"
+repository = "https://gitlab.com/robigalia/sel4-start"
+readme = "README.md"
+license = "MIT/Apache-2.0"
+build = "build.rs"
+
+[dependencies]
+sel4-sys = "0.0.3"
+
+[features]
+unstable = []
+
+[lib]
+path = "lib.rs"
+
+[build-dependencies]
+maplit = "0.1.3"
