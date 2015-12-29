@@ -27,7 +27,7 @@ _sel4_start:
     movw $0, -4(%esp)
     movw $0, -4(%esp)
     /* Now go to the "main" stub that rustc generates */
-    jmp main
+    call main
     /* if main returns, die a loud and painful death. */
     ud2
     .data
