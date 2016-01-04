@@ -1,0 +1,7 @@
+before_script:
+  - git submodule update --init --recursive
+build:
+  script: "cargo build --target i686-sel4-unknown"
+  tags:
+    - rust
+    - sel4
