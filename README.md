@@ -1,6 +1,5 @@
 # sel4-start
 
-[![Travis](https://img.shields.io/travis/robigalia/sel4-start.svg?style=flat-square)](https://travis-ci.org/robigalia/sel4-start)
 [![Crates.io](https://img.shields.io/crates/v/sel4-start.svg?style=flat-square)](https://crates.io/crates/sel4-start)
 
 [Documentation](https://doc.robigalia.org/sel4_start)
@@ -14,3 +13,7 @@ manual](http://sel4.systems/Info/Docs/seL4-manual-2.0.0.pdf), table 9.2 on
 page 39, for canonical information about the content of the `BootInfo`.
 
 The initial thread is created with 16K of stack space.
+
+## Status
+
+Complete.
