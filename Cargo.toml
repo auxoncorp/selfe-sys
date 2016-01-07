@@ -6,7 +6,7 @@
 # except according to those terms.
 [package]
 name = "sel4-start"
-version = "0.0.15"
+version = "0.0.18"
 authors = ["Corey Richardson <corey@octayn.net>"]
 description = "Crate defining the entry point to the initial thread on seL4"
 documentation = "https://doc.robigalia.org/sel4_start"
@@ -16,7 +16,7 @@ license = "MIT/Apache-2.0"
 build = "build.rs"
 
 [dependencies]
-sel4-sys = "0.0.15"
+sel4-sys = "0.0.18"
 
 [features]
 unstable = []
