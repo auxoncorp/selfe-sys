@@ -17,6 +17,7 @@ fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
     let arch_to_target = hashmap! {
         "x86" => "i686-unknown-linux-gnu",
+        "arm" => "arm-linux-gnueabi",
     };
     for (arch, llvmtriple) in &arch_to_target {
         assert!(Command::new("/usr/bin/env")
