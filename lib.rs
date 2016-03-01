@@ -9,6 +9,7 @@
  */
 #![no_std]
 #![feature(lang_items, no_std, core_intrinsics)]
+#![doc(html_root_url = "https://doc.robigalia.org/")]
 
 extern crate sel4_sys;
 use sel4_sys::*;
