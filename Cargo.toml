@@ -17,6 +17,7 @@ build = "build.rs"
 
 [dependencies]
 sel4-sys = "0.0.20"
+sel4 = "0.0.2"
 
 [features]
 unstable = []

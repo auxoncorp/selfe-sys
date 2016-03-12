@@ -8,10 +8,11 @@
  * according to those terms.
  */
 #![no_std]
-#![feature(lang_items, no_std, core_intrinsics)]
+#![feature(lang_items, core_intrinsics)]
 #![doc(html_root_url = "https://doc.robigalia.org/")]
 
 extern crate sel4_sys;
+extern crate sel4;
 use sel4_sys::*;
 
 pub static mut BOOTINFO: *mut seL4_BootInfo = (0 as *mut seL4_BootInfo);
@@ -40,7 +41,11 @@ fn lang_start(main: *const u8, _argc: isize, _argv: *const *const u8) -> isize {
 // the initial thread really ought not fail. but if it does, hang.
 // eventually do something smarter. a backtrace might be nice.
 #[lang = "panic_fmt"]
-fn panic_fmt() {
+extern fn panic_fmt(fmt: core::fmt::Arguments, file: &'static str, line: u32) -> ! {
+    use core::fmt::Write;
+    write!(sel4::DebugOutHandle, "panic at {}:{}: ", file, line);
+    let _ = sel4::DebugOutHandle.write_fmt(fmt);
+    let _ = sel4::DebugOutHandle.write_char('\n');
     unsafe { core::intrinsics::abort(); }
 }
 
