@@ -8,12 +8,18 @@
  * according to those terms.
  */
 #![no_std]
-#![feature(lang_items, core_intrinsics)]
+#![feature(lang_items, allocator, core_intrinsics)]
 #![doc(html_root_url = "https://doc.robigalia.org/")]
+#![allocator]
 
 extern crate sel4_sys;
 extern crate sel4;
+
 use sel4_sys::*;
+
+mod alloc;
+
+pub use alloc::*;
 
 pub static mut BOOTINFO: *mut seL4_BootInfo = (0 as *mut seL4_BootInfo);
 static mut RUN_ONCE: bool = false;
@@ -43,7 +49,7 @@ fn lang_start(main: *const u8, _argc: isize, _argv: *const *const u8) -> isize {
 #[lang = "panic_fmt"]
 extern fn panic_fmt(fmt: core::fmt::Arguments, file: &'static str, line: u32) -> ! {
     use core::fmt::Write;
-    write!(sel4::DebugOutHandle, "panic at {}:{}: ", file, line);
+    let _ = write!(sel4::DebugOutHandle, "panic at {}:{}: ", file, line);
     let _ = sel4::DebugOutHandle.write_fmt(fmt);
     let _ = sel4::DebugOutHandle.write_char('\n');
     unsafe { core::intrinsics::abort(); }
