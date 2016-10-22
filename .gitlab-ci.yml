@@ -1,7 +1,17 @@
-before_script:
-  - git submodule update --init --recursive
 build:
+  before_script:
+    - git submodule update --init --recursive
   script: "cargo build --target i686-sel4-unknown"
   tags:
     - rust
     - sel4
+verify_signatures:
+    image: ubuntu:16.10
+    script:
+        - apt update
+        - apt install --assume-yes python-pexpect gnupg2 git
+        - git clone --depth=1 https://gitlab.com/robigalia/meta
+        - gpg2 --list-keys # to force it to create GNUPGHOME instead of racing in the pipe below
+        - gpg2 --export --no-default-keyring --keyring ./meta/.gnupg/pubring.kbx | gpg2 --import
+        - gpg2 --list-keys --fingerprint --fingerprint --verbose
+        - ./meta/verify-signatures.py HEAD ./meta/.mailmap
