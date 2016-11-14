@@ -16,22 +16,47 @@ _sel4_start:
     leal    _stack_top, %esp
     /* Setup segment selector for IPC buffer access. */
     movw    $((7 << 3) | 3), %ax
-    movw    %ax, %gs
+    movw    %ax, %fs
     /* Setup the global "bootinfo" structure. */
     pushl   %ebx
     call    __sel4_start_init_boot_info
     /* We drop another word off the stack pointer so that rustc's generated
-     * main can scrape the "argc" and "argv" off the stack. We set them to 0
-     * and NULL though. */
-    subl    $4, %esp
-    movw $0, -4(%esp)
-    movw $0, -4(%esp)
+     * main can scrape the "argc" and "argv" off the stack.
+     * TODO: why is this necessary? Caller cleanup of above %ebx? */
+    addl    $4, %esp
+
+    /* Null terminate auxv */
+    pushl $0
+    pushl $0
+    /* Null terminate envp */
+    pushl $0
+    /* add at least one environment string (why?) */
+    leal environment_string, %eax
+    pushl %eax
+    /* Null terminate argv */
+    pushl $0
+    /* Give an argv[0] */
+    leal prog_name, %eax
+    pushl %eax
+    /* Give argc */
+    pushl $1
+    /* No atexit */
+    movl $0, %edx
+
     /* Now go to the "main" stub that rustc generates */
     call main
+
     /* if main returns, die a loud and painful death. */
     ud2
+
     .data
     .align 4
+
+environment_string:
+    .asciz "seL4=1"
+prog_name:
+    .asciz "rootserver"
+
     .bss
     .align  8
 _stack_bottom:
