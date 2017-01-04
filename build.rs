@@ -17,7 +17,8 @@ fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
     let arch_to_target = hashmap! {
         "x86" => "i686-unknown-linux-gnu",
-        "arm" => "arm-linux-gnueabi",
+        "x86_64" => "x86_64-unknown-linux-gnu",
+        "arm" => "arm-linux-gnueabihf",
     };
     for (arch, llvmtriple) in &arch_to_target {
         assert!(Command::new("/usr/bin/env")
@@ -33,9 +34,14 @@ fn main() {
             .status().unwrap().success());
     }
 
-    if env::var("TARGET").unwrap() == "i686-sel4-unknown" {
+    println!("cargo:rustc-link-search=native={}", out_dir);
+    let target = env::var("TARGET").unwrap();
+    if target == "i686-sel4-robigalia" {
         println!("cargo:rustc-link-lib=static=x86");
-        println!("cargo:rustc-link-search=native={}", out_dir);
+    } else if target == "x86_64-sel4-robigalia" {
+        println!("cargo:rustc-link-lib=static=x86_64");
+    } else if target == "arm-sel4-robigalia" {
+        println!("cargo:rustc-link-lib=static=arm");
     }
 
 }
