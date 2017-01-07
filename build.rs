@@ -25,6 +25,7 @@ fn main() {
             .arg("clang")
             .arg(&*format!("{}.s", arch))
             .args(&["-c", "-target", llvmtriple, "-o", &*format!("{}/{}.o", out_dir, arch)])
+            .arg("-fPIC")
             .status().unwrap().success());
         assert!(Command::new("/usr/bin/env")
             .arg("ar")
