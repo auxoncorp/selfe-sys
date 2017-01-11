@@ -50,7 +50,7 @@ prog_name:
     .asciz "rootserver"
 
     .bss
-    .align  8
+    .align  16
 _stack_bottom:
     .space  16384
 _stack_top:
