@@ -16,8 +16,8 @@ license = "MIT/Apache-2.0"
 build = "build.rs"
 
 [dependencies]
-sel4-sys = "0.0.26"
-sel4 = "0.0.9"
+sel4-sys = "0.0.27"
+sel4 = "0.0.11"
 
 [features]
 unstable = []
