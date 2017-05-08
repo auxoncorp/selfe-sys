@@ -1,4 +1,5 @@
 build:
+  image: registry.gitlab.com/robigalia/runner:latest
   before_script:
     - git submodule update --init --recursive
   script: 
