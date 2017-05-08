@@ -1,10 +1,9 @@
 build:
   before_script:
     - git submodule update --init --recursive
-  script: "xargo build --target i686-sel4-robigalia"
-  tags:
-    - rust
-    - sel4
+  script: 
+    - xargo build --target i686-sel4-robigalia
+    - xargo build --target x86_64-sel4-robigalia
 verify_signatures:
     image: ubuntu:17.04
     script:
