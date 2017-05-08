@@ -27,7 +27,7 @@ _sel4_start:
     pushq %rax
     /* Null terminate argv */
     pushq $0
-    /* Give an argv[0] */
+    /* Give an argv[0] (why?) */
     leaq prog_name, %rax
     pushq %rax
     /* Give argc */
