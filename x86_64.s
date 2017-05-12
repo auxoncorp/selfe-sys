@@ -17,6 +17,10 @@ _sel4_start:
     /* Setup the global "bootinfo" structure. */
     call    __sel4_start_init_boot_info
 
+    /* N.B. rsp MUST be aligned to a 16-byte boundary when main is called.
+     * Insert or remove padding here to make that happen.
+     */
+    pushq $0
     /* Null terminate auxv */
     pushq $0
     pushq $0
