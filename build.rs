@@ -23,9 +23,9 @@ fn main() {
     for (arch, llvmtriple) in &arch_to_target {
         assert!(Command::new("/usr/bin/env")
             .arg("clang")
+            .arg("-fPIC")
             .arg(&*format!("{}.s", arch))
             .args(&["-c", "-target", llvmtriple, "-o", &*format!("{}/{}.o", out_dir, arch)])
-            .arg("-fPIC")
             .status().unwrap().success());
         assert!(Command::new("/usr/bin/env")
             .arg("ar")
