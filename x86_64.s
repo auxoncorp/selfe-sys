@@ -9,6 +9,7 @@
  */
     .global _sel4_start
     .global _start
+    .global _stack_bottom
     .text
 
 _start:
@@ -54,7 +55,7 @@ prog_name:
     .asciz "rootserver"
 
     .bss
-    .align  16
+    .align  4096
 _stack_bottom:
-    .space  16384
+    .space  65536
 _stack_top:
