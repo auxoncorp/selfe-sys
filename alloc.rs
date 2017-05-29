@@ -64,7 +64,8 @@ extern fn unset_usable_size(size: usize, align: usize) -> usize {
 // out-of-line space for metadata.
 //
 // need scratch for reservations etc.
-static mut SCRATCH_HEAP: [u8; 1024 * 1024 * 16] = [0; 1024 * 1024 * 16];
+const SCRATCH_LEN_BYTES: usize = 1024 * 1024 * 16;
+static mut SCRATCH_HEAP: [u8; SCRATCH_LEN_BYTES] = [0; SCRATCH_LEN_BYTES];
 static mut SCRATCH_PTR: usize = 0;
 
 #[allow(unused_variables)]
@@ -73,7 +74,7 @@ extern fn scratch_allocate(size: usize, align: usize) -> *mut u8 {
         SCRATCH_PTR += SCRATCH_PTR % align;
         let res = &mut SCRATCH_HEAP[SCRATCH_PTR];
         SCRATCH_PTR += size;
-        assert!(SCRATCH_PTR <= 4096*16);
+        assert!(SCRATCH_PTR <= SCRATCH_LEN_BYTES);
         res
     }
 }
