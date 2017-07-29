@@ -8,9 +8,8 @@
  * according to those terms.
  */
 #![no_std]
-#![feature(lang_items, allocator, core_intrinsics)]
+#![feature(lang_items, global_allocator, allocator_api, alloc, core_intrinsics)]
 #![doc(html_root_url = "https://doc.robigalia.org/")]
-#![allocator]
 
 extern crate sel4_sys;
 extern crate sel4;
@@ -23,6 +22,8 @@ pub use alloc::*;
 
 pub static mut BOOTINFO: *mut seL4_BootInfo = (0 as *mut seL4_BootInfo);
 static mut RUN_ONCE: bool = false;
+#[global_allocator]
+static ALLOCATOR: ScratchAlloc = ScratchAlloc { };
 
 #[doc(hidden)]
 #[no_mangle]
