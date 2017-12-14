@@ -2,8 +2,18 @@ build:
   image: registry.gitlab.com/robigalia/runner:latest
   before_script:
     - git submodule update --init --recursive
+    - git clone https://gitlab.com/robigalia/sel4-config ../sel4-config
+    - git clone --recursive https://gitlab.com/robigalia/sel4 ../sel4
+    - git clone --recursive https://gitlab.com/robigalia/sel4-sys ../sel4-sys
+    - git clone https://gitlab.com/robigalia/rust-sel4 ../rust-sel4
   script: 
+    - pushd ../sel4
+    - make x86_defconfig
+    - popd
     - xargo build --target i686-sel4-robigalia
+    - pushd ../sel4
+    - make x64_qemu_defconfig
+    - popd
     - xargo build --target x86_64-sel4-robigalia
 verify_signatures:
     image: ubuntu:17.04

@@ -1,0 +1,6 @@
+[target.x86_64-sel4-robigalia.dependencies]
+alloc = {}
+[target.i686-sel4-robigalia.dependencies]
+alloc = {}
+[target.arm-sel4-robigalia.dependencies]
+alloc = {}
