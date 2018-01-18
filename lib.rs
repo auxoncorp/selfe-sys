@@ -8,7 +8,7 @@
  * according to those terms.
  */
 #![no_std]
-#![feature(lang_items, global_allocator, allocator_api, alloc, core_intrinsics)]
+#![feature(lang_items, global_allocator, allocator_api, alloc, core_intrinsics, asm, naked_functions, repr_align, attr_literals, used)]
 #![doc(html_root_url = "https://doc.robigalia.org/")]
 
 extern crate sel4_sys;
@@ -20,10 +20,32 @@ mod alloc;
 
 pub use alloc::*;
 
+#[used]
+#[repr(align(4096))]
+#[doc(hidden)]
+/// A wrapper around our stack so that we can specify its alignment requirement.
+struct Stack {
+    stack: [u8; STACK_SIZE],
+}
+
 pub static mut BOOTINFO: *mut seL4_BootInfo = (0 as *mut seL4_BootInfo);
 static mut RUN_ONCE: bool = false;
 #[global_allocator]
 static ALLOCATOR: ScratchAlloc = ScratchAlloc { };
+#[used]
+#[doc(hidden)]
+static ENVIRONMENT_STRING: &'static [u8] = b"seL4=1\0\0";
+#[used]
+#[doc(hidden)]
+static PROG_NAME: &'static [u8] = b"rootserver\0";
+#[used]
+/// The size of the initial root thread stack. This stack is located in the root task image data
+/// section.
+pub const STACK_SIZE: usize = 1024 * 68;
+#[used]
+#[doc(hidden)]
+/// The stack for our initial root task thread.
+static mut STACK: Stack = Stack { stack: [0u8; STACK_SIZE] };
 
 #[lang = "termination"]
 trait Termination {
@@ -69,3 +91,17 @@ extern fn panic_fmt(fmt: core::fmt::Arguments, file: &'static str, line: u32) ->
 fn eh_personality() {
     unsafe { core::intrinsics::abort(); }
 }
+
+/// Returns the address of the bottom of the stack for the initial root task thread.
+pub fn get_stack_bottom_addr() -> usize {
+    unsafe { (&(STACK.stack)).as_ptr() as usize }
+}
+
+#[cfg(target_arch = "x86")]
+include!("x86.rs");
+
+#[cfg(target_arch = "x86_64")]
+include!("x86_64.rs");
+
+#[cfg(all(target_arch = "arm", target_pointer_width = "32"))]
+include!("arm.rs");
