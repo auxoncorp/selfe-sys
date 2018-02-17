@@ -25,6 +25,17 @@ static mut RUN_ONCE: bool = false;
 #[global_allocator]
 static ALLOCATOR: ScratchAlloc = ScratchAlloc { };
 
+#[lang = "termination"]
+trait Termination {
+    fn report(self) -> i32;
+}
+
+impl Termination for () {
+    fn report(self) -> i32 {
+        0
+    }
+}
+
 #[doc(hidden)]
 #[no_mangle]
 /// Internal function which sets up the global `BOOTINFO`. Can only be called once - it sets a
@@ -38,10 +49,8 @@ pub unsafe extern "C" fn __sel4_start_init_boot_info(bootinfo: *mut seL4_BootInf
 }
 
 #[lang = "start"]
-fn lang_start(main: *const u8, _argc: isize, _argv: *const *const u8) -> isize {
-    unsafe {
-        core::intrinsics::transmute::<_, fn()>(main)();
-    }
+fn lang_start<T: Termination + 'static>(main: fn() -> T, _argc: isize, _argv: *const *const u8) -> isize {
+    main();
     panic!("Root server shouldn't ever return from main!");
 }
 
