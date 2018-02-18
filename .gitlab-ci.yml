@@ -16,7 +16,7 @@ build:
     - popd
     - xargo build --target x86_64-sel4-robigalia
 verify_signatures:
-    image: ubuntu:17.04
+    image: ubuntu:17.10
     script:
         - apt update
         - apt install --assume-yes python-pexpect gnupg2 git
