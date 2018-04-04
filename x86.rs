@@ -33,12 +33,14 @@ pub unsafe extern fn _start() -> ! {
     // a stack!
     //
     // Our solution is to set the stack pointer to the bootinfo structure that sel4 gave
-    // us in ebx, and save a backup of the first words from that structure. Then,
-    // once we set the stack pointer to its real value, we can then fix the clobbered first
-    // words in the bootinfo structure with our backup.
+    // us in ebx, and save a backup of the first word from that structure. Then,
+    // once we set the stack pointer to its real value, we can fix the clobbered first
+    // word in the bootinfo structure with our backup.
     //
-    // Because LLVM loads the instruction pointer at the beginning of the function before
-    // any of our code runs, we have to split this out into two functions.
+    // Because LLVM does this CALL/POP magic at the beginning of the function before
+    // any of our code runs, we have to setup our temporary stack first in a function by
+    // itself that doesn't touch any variables so as to not need the CALL/POP magic, then
+    // we jump to the real start function that does.
 
     // setup temporary stack pointer into the bootinfo structure and backup the parts
     // we will corrupt
@@ -46,10 +48,11 @@ pub unsafe extern fn _start() -> ! {
         "
         /* set stack pointer to bootinfo structure */
         movl %ebx, %esp
-        /* setup a two-word stack will overwrite the beginning of the bootinfo structure */
+        /* setup a one-word stack will overwrite the beginning of the bootinfo structure */
         addl $$4, %esp
-        /* save a backup of the affected bootinfo words */
+        /* save a backup of the affected bootinfo word */
         movl (%ebx), %esi
+        /* now do the important stuff */
         jmp _real_start
         "
         :

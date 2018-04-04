@@ -21,11 +21,6 @@
 ///   sel4_start::lang_start() (start lang item) ->
 ///   <user-defined>::main()
 pub unsafe extern fn _start() -> ! {
-    // Due to the use of position-independent code if you directly reference the address
-    // of a variable you will get link errors complaining about R_X86_64_32S relocations.
-    // The solution is to either let LLVM figure out what to do using operands or use
-    // RIP-relative instruction syntax (e.g. LABEL(%rip)).
-
     // setup stack pointer
     // don't mess up rdi which we need next
     asm!(

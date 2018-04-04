@@ -25,8 +25,10 @@ pub unsafe extern fn _start() -> ! {
     // r0 because it points to our bootinfo structure. Save it off in a temp register so
     // we can get to it later.
     //
-    // Because LLVM loads the instruction pointer at the beginning of the function before
-    // any of our code runs, we have to split this out into two functions.
+    // Because LLVM will clobber r0 at the beginning of the function before any of our code
+    // runs, we do the stashing here in this function that doesn't touch any variables
+    // that would require position independent code and so won't clobber r0, then branch
+    // to the real start function that does.
 
     asm!(
         "
