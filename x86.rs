@@ -68,7 +68,7 @@ pub unsafe extern fn _start() -> ! {
 #[naked]
 #[no_mangle]
 #[doc(hidden)]
-pub unsafe extern fn _real_start() {
+pub unsafe extern fn _real_start() -> ! {
     // setup real stack pointer and fix the corrupted value in the bootinfo structure
     // don't mess with ebx which we need next
     asm!(
