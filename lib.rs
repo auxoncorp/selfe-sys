@@ -85,6 +85,12 @@ extern fn panic_fmt(fmt: core::fmt::Arguments, file: &'static str, line: u32) ->
     unsafe { core::intrinsics::abort(); }
 }
 
+#[lang = "oom"]
+#[no_mangle]
+pub fn rust_oom() -> ! {
+    panic!("Root server has run out of memory!");
+}
+
 #[lang = "eh_personality"]
 fn eh_personality() {
     unsafe { core::intrinsics::abort(); }
