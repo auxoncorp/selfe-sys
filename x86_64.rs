@@ -8,7 +8,6 @@
  * according to those terms.
  */
 
-#[used]
 #[doc(hidden)]
 #[naked]
 #[no_mangle]

@@ -1,39 +1,54 @@
 extern crate alloc;
-use self::alloc::heap::{Alloc, Layout, AllocErr};
+use core::alloc::{Alloc, Layout, AllocErr, Opaque, GlobalAlloc};
+use core::ptr::NonNull;
 
-pub static mut ALLOCATE: extern fn(Layout) -> Result<*mut u8, AllocErr> = unset_allocate;
-pub static mut DEALLOCATE: extern fn (*mut u8, Layout) = unset_deallocate;
-pub static mut REALLOCATE: extern fn (*mut u8, Layout, Layout) -> Result<*mut u8, AllocErr> = unset_reallocate;
+pub static mut ALLOCATE: extern fn(Layout) -> Result<NonNull<Opaque>, AllocErr> = unset_allocate;
+pub static mut DEALLOCATE: extern fn (NonNull<Opaque>, Layout) = unset_deallocate;
+pub static mut REALLOCATE: extern fn (NonNull<Opaque>, Layout, usize) -> Result<NonNull<Opaque>, AllocErr> = unset_reallocate;
 
 pub struct ScratchAlloc;
 
 unsafe impl<'a> Alloc for &'a ScratchAlloc {
-    unsafe fn alloc(&mut self, layout: Layout) -> Result<*mut u8, AllocErr> {
+    unsafe fn alloc(&mut self, layout: Layout) -> Result<NonNull<Opaque>, AllocErr> {
         ALLOCATE(layout)
     }
 
-    unsafe fn dealloc(&mut self, ptr: *mut u8, layout: Layout) {
+    unsafe fn dealloc(&mut self, ptr: NonNull<Opaque>, layout: Layout) {
         DEALLOCATE(ptr, layout);
     }
 
-    unsafe fn realloc(&mut self, ptr: *mut u8, old_layout: Layout, new_layout: Layout) -> Result<*mut u8, AllocErr> {
-        REALLOCATE(ptr, old_layout, new_layout)
+    unsafe fn realloc(&mut self, ptr: NonNull<Opaque>, old_layout: Layout, new_size: usize) -> Result<NonNull<Opaque>, AllocErr> {
+        REALLOCATE(ptr, old_layout, new_size)
+    }
+}
+
+unsafe impl GlobalAlloc for ScratchAlloc {
+    unsafe fn alloc(&self, layout: Layout) -> *mut Opaque {
+        ALLOCATE(layout).unwrap().as_ptr()
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut Opaque, layout: Layout) {
+        DEALLOCATE(NonNull::new(ptr).unwrap(), layout);
+    }
+
+    unsafe fn realloc(&self, ptr: *mut Opaque, old_layout: Layout, new_size: usize) -> *mut Opaque {
+        REALLOCATE(NonNull::new(ptr).unwrap(), old_layout, new_size).unwrap().as_ptr()
     }
 }
 
 #[allow(unused_variables)]
-extern fn unset_allocate(layout: Layout) -> Result<*mut u8, AllocErr> {
-    Err(AllocErr::Unsupported { details: "No heap available. Call sel4_start::switch_to_scratch() to use the static scratch heap." })
+extern fn unset_allocate(layout: Layout) -> Result<NonNull<Opaque>, AllocErr> {
+    Err(AllocErr)
 }
 
 #[allow(unused_variables)]
-extern fn unset_deallocate(ptr: *mut u8, layout: Layout) {
+extern fn unset_deallocate(ptr: NonNull<Opaque>, layout: Layout) {
     unimplemented!();
 }
 
 #[allow(unused_variables)]
-extern fn unset_reallocate(ptr: *mut u8, old_layout: Layout, new_layout: Layout) -> Result<*mut u8, AllocErr> {
-    Err(AllocErr::Unsupported { details: "No heap available. Call sel4_start::switch_to_scratch() to use the static scratch heap." })
+extern fn unset_reallocate(ptr: NonNull<Opaque>, old_layout: Layout, new_size: usize) -> Result<NonNull<Opaque>, AllocErr> {
+    Err(AllocErr)
 }
 
 // Note: reduce to 1024 * 16 * 4 + 1024 * 16 eventually.
@@ -47,32 +62,33 @@ static mut SCRATCH_HEAP: [u8; SCRATCH_LEN_BYTES] = [0; SCRATCH_LEN_BYTES];
 static mut SCRATCH_PTR: usize = 0;
 
 #[allow(unused_variables)]
-extern fn scratch_allocate(layout: Layout) -> Result<*mut u8, AllocErr> {
+extern fn scratch_allocate(layout: Layout) -> Result<NonNull<Opaque>, AllocErr> {
     unsafe {
         SCRATCH_PTR += SCRATCH_PTR % layout.align();
         let res = &mut SCRATCH_HEAP[SCRATCH_PTR];
         SCRATCH_PTR += layout.size();
         if SCRATCH_PTR <= SCRATCH_LEN_BYTES {
-            Ok(res)
+            Ok(NonNull::new(res).unwrap().as_opaque())
         } else {
-            Err(AllocErr::Exhausted { request: layout })
+            Err(AllocErr)
         }
     }
 }
 
 #[allow(unused_variables)]
-extern fn scratch_deallocate(ptr: *mut u8, layout: Layout) {
+extern fn scratch_deallocate(ptr: NonNull<Opaque>, layout: Layout) {
     unsafe {
-        if SCRATCH_PTR - layout.size() == ptr as usize {
+        if SCRATCH_PTR - layout.size() == ptr.as_ptr() as usize {
             SCRATCH_PTR -= layout.size();
         }
     }
 }
 
 #[allow(unused_variables)]
-extern fn scratch_reallocate(ptr: *mut u8, old_layout: Layout, new_layout: Layout) -> Result<*mut u8, AllocErr> {
+extern fn scratch_reallocate(ptr: NonNull<Opaque>, old_layout: Layout, new_size: usize) -> Result<NonNull<Opaque>, AllocErr> {
+    let res = Layout::from_size_align(new_size, old_layout.align());
     scratch_deallocate(ptr, old_layout);
-    scratch_allocate(new_layout)
+    scratch_allocate(res.unwrap())
 }
 
 pub unsafe fn switch_to_scratch() {

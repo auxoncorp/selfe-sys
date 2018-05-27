@@ -8,7 +8,7 @@
  * according to those terms.
  */
 #![no_std]
-#![feature(lang_items, global_allocator, allocator_api, alloc, core_intrinsics, asm, naked_functions, repr_align, attr_literals, used)]
+#![feature(lang_items, global_allocator, allocator_api, alloc, core_intrinsics, asm, naked_functions, attr_literals, used)]
 #![doc(html_root_url = "https://doc.robigalia.org/")]
 
 extern crate sel4_sys;
@@ -20,7 +20,6 @@ mod alloc;
 
 pub use alloc::*;
 
-#[used]
 #[repr(align(4096))]
 #[doc(hidden)]
 /// A wrapper around our stack so that we can specify its alignment requirement.
@@ -38,7 +37,6 @@ static ENVIRONMENT_STRING: &'static [u8] = b"seL4=1\0\0";
 #[used]
 #[doc(hidden)]
 static PROG_NAME: &'static [u8] = b"rootserver\0";
-#[used]
 /// The size of the initial root thread stack. This stack is located in the root task image data
 /// section.
 pub const STACK_SIZE: usize = 1024 * 68;
