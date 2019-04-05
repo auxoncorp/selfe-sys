@@ -23,8 +23,7 @@ where
 fn build_libsel4(
     kernel_path: &Path,
     _tools_path: &Path,
-    cross_compiler_prefix: Option<&str>,
-    config: &HashMap<String, confignoble::SingleValue>,
+    config: &confignoble::contextualized::Contextualized,
 ) -> PathBuf {
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR not defined");
     let out_dir = Path::new(&out_dir);
@@ -46,7 +45,7 @@ fn build_libsel4(
 
     let mut opts = HashMap::new();
 
-    if let Some(prefix) = cross_compiler_prefix {
+    if let Some(prefix) = &config.build.cross_compiler_prefix {
         opts.insert("CROSS_COMPILER_PREFIX".to_string(), prefix.to_owned());
     }
 
@@ -60,7 +59,7 @@ fn build_libsel4(
         "public".to_string(),
     );
 
-    for (k, v) in config.into_iter() {
+    for (k, v) in config.config.iter() {
         match v {
             confignoble::SingleValue::String(s) => {
                 opts.insert(k.to_owned(), s.to_owned());
@@ -249,12 +248,10 @@ fn main() {
 
     let target_ptr_width = env::var("CARGO_CFG_TARGET_POINTER_WIDTH")
         .expect("CARGO_CFG_TARGET_POINTER_WIDTH must be set");
-    let cross_compiler_prefix = None;
+
     let build_dir = build_libsel4(
-        &sel4_path,
-        tools_path,
-        cross_compiler_prefix,
-        &config.config,
+        &sel4_path, tools_path, // cross_compiler_prefix,
+        &config,
     );
     gen_bindings(
         &sel4_path,

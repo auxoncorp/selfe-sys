@@ -7,12 +7,21 @@ use toml::de::Error as TomlDeError;
 use toml::ser::{to_string_pretty, Error as TomlSerError};
 use toml::value::{Table as TomlTable, Value as TomlValue};
 
+#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq, Default)]
+pub struct PlatformBuild {
+    pub cross_compiler_prefix: Option<String>,
+    pub toolchain_dir: Option<PathBuf>
+}
+
+
+
 pub(crate) mod raw {
     use super::*;
 
     #[derive(Serialize, Deserialize)]
     pub(crate) struct Raw {
         pub(crate) sel4: SeL4,
+        pub(crate) build: HashMap<String, PlatformBuild>,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -79,6 +88,7 @@ pub mod full {
     #[derive(Debug, Clone, PartialEq)]
     pub struct Full {
         pub sel4: SeL4,
+        pub build: HashMap<String, PlatformBuild>,
     }
 
     #[derive(Debug, Clone, PartialEq)]
@@ -126,6 +136,7 @@ pub mod full {
                     default_platform: raw_content.sel4.default_platform,
                     config: structure_config(raw_content.sel4.config)?,
                 },
+                build: raw_content.build
             })
         }
     }
@@ -277,6 +288,7 @@ pub mod contextualized {
         pub tools_dir: PathBuf,
         pub context: Context,
         pub config: HashMap<String, SingleValue>,
+        pub build: PlatformBuild
     }
 
     #[derive(Debug, Clone, PartialEq)]
@@ -298,16 +310,21 @@ pub mod contextualized {
         }
 
         pub fn from_full(
-            source: full::Full,
+            mut source: full::Full,
             target: String,
             is_debug: bool,
             platform: Option<String>,
         ) -> Result<Contextualized, ImportError> {
+
+            let platform = platform
+                .or(source.sel4.default_platform)
+                .ok_or_else(|| ImportError::NoPlatformSupplied)?;
+
+            let build = source.build.remove(&platform).unwrap_or_default();
+
             let context = Context {
+                platform,
                 target,
-                platform: platform
-                    .or(source.sel4.default_platform)
-                    .ok_or_else(|| ImportError::NoPlatformSupplied)?,
                 is_debug,
             };
             let source_config = source.sel4.config;
@@ -330,6 +347,7 @@ pub mod contextualized {
                 tools_dir: source.sel4.tools_dir,
                 context,
                 config,
+                build,
             })
         }
     }

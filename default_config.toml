@@ -1,0 +1,33 @@
+[sel4]
+default_platform = 'pc99'
+kernel_dir = './deps/seL4'
+tools_dir = './deps/seL4_tools'
+
+[sel4.config]
+KernelRetypeFanOutLimit = 256
+
+[sel4.config.x86_64]
+KernelArch = 'x86'
+KernelX86Sel4Arch = 'x86_64'
+
+[sel4.config.pc99]
+
+[sel4.config.sabre]
+KernelARMPlatform = 'sabre'
+
+[sel4.config.debug]
+KernelPrinting = true
+
+[sel4.config.release]
+KernelPrinting = false
+
+# A poorly thought out idea for toolchain management: 
+[build.pc99]
+
+[build.sabre]
+cross_compiler_prefix = "arm-linux-gnueabihf-"
+
+[build.crazy]
+toolchain_dir = "/opt/my_crazy_toolchain"
+cross_compiler_prefix = "arm-linux-gnueabi-"
+# end of idea
