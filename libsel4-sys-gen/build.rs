@@ -104,6 +104,41 @@ fn build_libsel4(
     build_dir
 }
 
+const BLACKLIST_TYPES: &'static [&'static str] = &[
+    "seL4_CPtr",
+    "seL4_Word",
+    "seL4_Int8",
+    "seL4_Int16",
+    "seL4_Int32",
+    "seL4_Int64",
+    "seL4_Uint8",
+    "seL4_Uint16",
+    "seL4_Uint32",
+    "seL4_Uint64",
+];
+
+const BUILD_INCLUDE_DIRS: &'static [&'static str] = &[
+    "libsel4/include",
+    "libsel4/autoconf",
+    "kernel/gen_config",
+    "libsel4/gen_config",
+    "libsel4/arch_include/$ARCH$",
+    "libsel4/sel4_arch_include/$SEL4_ARCH$",
+];
+
+const KERNEL_INCLUDE_DIRS: &'static [&'static str] = &[
+    "libsel4/include",
+    "libsel4/arch_include/$ARCH$",
+    "libsel4/sel4_arch_include/$SEL4_ARCH$",
+    "libsel4/mode_include/$PTR_WIDTH$",
+];
+
+fn expand_include_dir(d: &str, arch: &str, sel4_arch: &str, ptr_width: &str) -> String {
+    d.replace("$ARCH$", arch)
+        .replace("$SEL4_ARCH$", sel4_arch)
+        .replace("$PTR_WIDTH$", ptr_width)
+}
+
 fn gen_bindings(
     kernel_path: &Path,
     libsel4_build_path: &Path,
@@ -111,72 +146,34 @@ fn gen_bindings(
     sel4_arch: &str,
     ptr_width: &str,
 ) {
-    let bindings = Builder::default()
+    let mut bindings = Builder::default()
         .header("src/bindgen_wrapper.h")
         .use_core()
-        .ctypes_prefix("ctypes")
-        .blacklist_type("seL4_CPtr")
-        .blacklist_type("seL4_Word")
-        .blacklist_type("seL4_Int8")
-        .blacklist_type("seL4_Int16")
-        .blacklist_type("seL4_Int32")
-        .blacklist_type("seL4_Int64")
-        .blacklist_type("seL4_Uint8")
-        .blacklist_type("seL4_Uint16")
-        .blacklist_type("seL4_Uint32")
-        .blacklist_type("seL4_Uint64")
-        .clang_arg(format!(
-            "-I{}",
-            libsel4_build_path.join("libsel4/include").display()
-        ))
-        .clang_arg(format!(
-            "-I{}",
-            libsel4_build_path.join("libsel4/autoconf").display()
-        ))
-        .clang_arg(format!(
-            "-I{}",
-            libsel4_build_path.join("kernel/gen_config").display()
-        ))
-        .clang_arg(format!(
-            "-I{}",
-            libsel4_build_path.join("libsel4/gen_config").display()
-        ))
-        .clang_arg(format!(
+        .ctypes_prefix("ctypes");
+
+    for t in BLACKLIST_TYPES {
+        bindings = bindings.blacklist_type(t);
+    }
+
+    for d in BUILD_INCLUDE_DIRS {
+        bindings = bindings.clang_arg(format!(
             "-I{}",
             libsel4_build_path
-                .join(format!("libsel4/arch_include/{}", arch))
+                .join(expand_include_dir(d, arch, sel4_arch, ptr_width))
                 .display()
-        ))
-        .clang_arg(format!(
-            "-I{}",
-            kernel_path.join("libsel4/include").display()
-        ))
-        .clang_arg(format!(
-            "-I{}",
-            kernel_path
-                .join(format!("libsel4/arch_include/{}", arch))
-                .display()
-        ))
-        .clang_arg(format!(
+        ));
+    }
+
+    for d in KERNEL_INCLUDE_DIRS {
+        bindings = bindings.clang_arg(format!(
             "-I{}",
             kernel_path
-                .join(format!("libsel4/sel4_arch_include/{}", sel4_arch))
+                .join(expand_include_dir(d, arch, sel4_arch, ptr_width))
                 .display()
-        ))
-        .clang_arg(format!(
-            "-I{}",
-            libsel4_build_path
-                .join(format!("libsel4/sel4_arch_include/{}", sel4_arch))
-                .display()
-        ))
-        .clang_arg(format!(
-            "-I{}",
-            kernel_path
-                .join(format!("libsel4/mode_include/{}", ptr_width))
-                .display()
-        ))
-        .generate()
-        .expect("bindgen didn't work");
+        ));
+    }
+
+    let bindings = bindings.generate().expect("bindgen didn't work");
 
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR not defined");
     bindings
