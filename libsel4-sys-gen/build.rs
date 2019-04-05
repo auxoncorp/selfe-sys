@@ -89,9 +89,7 @@ fn build_libsel4(kernel_path: &Path, _tools_path: &Path, cross_compiler_prefix: 
 fn gen_bindings(kernel_path: &Path, libsel4_build_path: &Path, arch: &str, sel4_arch: &str, ptr_width: usize) {
     let bindings = Builder::default()
         .header("src/bindgen_wrapper.h")
-        // .blacklist_type("seL4_MessageInfo_t")
         .use_core()
-        .layout_tests(false)
         .ctypes_prefix("ctypes")
         .blacklist_type("seL4_CPtr")
         .blacklist_type("seL4_Word")
@@ -103,7 +101,6 @@ fn gen_bindings(kernel_path: &Path, libsel4_build_path: &Path, arch: &str, sel4_
         .blacklist_type("seL4_Uint16")
         .blacklist_type("seL4_Uint32")
         .blacklist_type("seL4_Uint64")
-        // .clang_arg(format!("-I./bindgen_include",))
         .clang_arg(format!("-I{}", libsel4_build_path.join("libsel4/include").display()))
         .clang_arg(format!("-I{}", libsel4_build_path.join("libsel4/autoconf").display()))
         .clang_arg(format!("-I{}", libsel4_build_path.join("kernel/gen_config").display()))
