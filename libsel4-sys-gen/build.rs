@@ -181,7 +181,7 @@ fn gen_bindings(
 }
 
 // TODO arm_hyp
-fn rust_arch_to_sel4_arch_category(arch: &str) -> String {
+fn rust_arch_to_sel4_arch(arch: &str) -> String {
     match arch {
         "arm" => "arm".to_owned(),
         "armv7" => "arm".to_owned(),
@@ -195,7 +195,7 @@ fn rust_arch_to_sel4_arch_category(arch: &str) -> String {
     }
 }
 
-fn rust_arch_to_sel4_arch(arch: &str) -> String {
+fn rust_arch_to_arch(arch: &str) -> String {
     match arch {
         "arm" => "aarch32".to_owned(),
         "armv7" => "aarch32".to_owned(),
@@ -209,41 +209,43 @@ fn rust_arch_to_sel4_arch(arch: &str) -> String {
     }
 }
 
+fn get_env(var: &str) -> String {
+    env::var(var).expect(&format!("{} must be set", var))
+}
+
 fn main() {
     env::set_var(
         "SEL4_CONFIG_PATH",
         "/home/mullr/devel/confignoble/default_config.toml",
     );
 
-    let config_file_path = env::var("SEL4_CONFIG_PATH").expect("SEL4_CONFIG_PATH must be set");
+    let config_file_path = get_env("SEL4_CONFIG_PATH");
     let config_file_path = Path::new(&config_file_path);
     let config_content = fs::read_to_string(config_file_path).expect("Can't read config file");
 
-    let arch = env::var("CARGO_CFG_TARGET_ARCH").expect("CARGO_CFG_TARGET_ARCH must be set");
-
-    let profile = env::var("PROFILE").expect("PROFILE must be set");
+    let profile = get_env("PROFILE");
     let debug = match profile.as_str() {
         "debug" => true,
         "release" => false,
         _ => panic!("Unexpected value for PROFILE"),
     };
 
+    let rust_arch = get_env("CARGO_CFG_TARGET_ARCH");
     let config = confignoble::contextualized::Contextualized::from_str(
         &config_content,
-        arch.to_owned(),
+        rust_arch.to_owned(),
         debug,
         None,
     )
     .expect("Error processing config file");
 
-    let sel4_arch_category = rust_arch_to_sel4_arch_category(&arch);
-    let sel4_arch = rust_arch_to_sel4_arch(&arch);
+    let sel4_arch = rust_arch_to_sel4_arch(&rust_arch);
+    let arch = rust_arch_to_arch(&rust_arch);
 
     let sel4_path = fs::canonicalize(&Path::new("/home/mullr/devel/auxon-sel4")).unwrap();
     let tools_path = Path::new("/home/mullr/sel4/seL4_tools");
 
-    let target_ptr_width = env::var("CARGO_CFG_TARGET_POINTER_WIDTH")
-        .expect("CARGO_CFG_TARGET_POINTER_WIDTH must be set");
+    let target_ptr_width = get_env("CARGO_CFG_TARGET_POINTER_WIDTH");
 
     let build_dir = build_libsel4(
         &sel4_path, tools_path, // cross_compiler_prefix,
@@ -252,8 +254,8 @@ fn main() {
     gen_bindings(
         &sel4_path,
         &build_dir,
-        &sel4_arch_category,
         &sel4_arch,
+        &arch,
         &target_ptr_width,
     );
 
