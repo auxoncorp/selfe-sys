@@ -242,22 +242,15 @@ fn main() {
     let sel4_arch = rust_arch_to_sel4_arch(&rust_arch);
     let arch = rust_arch_to_arch(&rust_arch);
 
-    let sel4_path = fs::canonicalize(&Path::new("/home/mullr/devel/auxon-sel4")).unwrap();
-    let tools_path = Path::new("/home/mullr/sel4/seL4_tools");
+    let sel4_path = fs::canonicalize(&Path::new(&config.kernel_dir))
+        .expect(&format!("Kernel dir: {}", config.kernel_dir.display()));
+    let tools_path = fs::canonicalize(&Path::new(&config.tools_dir))
+        .expect(&format!("Tools dir: {}", config.tools_dir.display()));
 
     let target_ptr_width = get_env("CARGO_CFG_TARGET_POINTER_WIDTH");
 
-    let build_dir = build_libsel4(
-        &sel4_path, tools_path, // cross_compiler_prefix,
-        &config,
-    );
-    gen_bindings(
-        &sel4_path,
-        &build_dir,
-        &sel4_arch,
-        &arch,
-        &target_ptr_width,
-    );
+    let build_dir = build_libsel4(&sel4_path, &tools_path, &config);
+    gen_bindings(&sel4_path, &build_dir, &sel4_arch, &arch, &target_ptr_width);
 
     // let build_dir = build_libsel4(&sel4_path, tools_path, None);
     // gen_bindings(&sel4_path, &build_dir, "x86", "x86_64", 64);

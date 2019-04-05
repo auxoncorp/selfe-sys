@@ -1,7 +1,7 @@
 [sel4]
 default_platform = 'pc99'
-kernel_dir = './deps/seL4'
-tools_dir = './deps/seL4_tools'
+kernel_dir = '/home/mullr/devel/auxon-sel4'
+tools_dir = '/home/mullr/src/sel4/seL4_tools'
 
 [sel4.config]
 KernelRetypeFanOutLimit = 256
