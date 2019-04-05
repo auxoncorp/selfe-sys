@@ -59,7 +59,7 @@ fn build_libsel4(
         "public".to_string(),
     );
 
-    for (k, v) in config.config.iter() {
+    for (k, v) in config.sel4_config.iter() {
         let v_str = match v {
             confignoble::SingleValue::String(s) => s.to_owned(),
             confignoble::SingleValue::Integer(i) => format!("{}", i),

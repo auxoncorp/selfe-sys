@@ -287,7 +287,7 @@ pub mod contextualized {
         pub kernel_dir: PathBuf,
         pub tools_dir: PathBuf,
         pub context: Context,
-        pub config: HashMap<String, SingleValue>,
+        pub sel4_config: HashMap<String, SingleValue>,
         pub build: PlatformBuild
     }
 
@@ -328,25 +328,25 @@ pub mod contextualized {
                 is_debug,
             };
             let source_config = source.sel4.config;
-            let mut config = source_config.shared_config;
+            let mut sel4_config = source_config.shared_config;
             if is_debug {
-                config.extend(source_config.debug_config)
+                sel4_config.extend(source_config.debug_config)
             } else {
-                config.extend(source_config.release_config)
+                sel4_config.extend(source_config.release_config)
             }
             let mut source_contextual_config = source_config.contextual_config;
             if let Some(target_config) = source_contextual_config.remove(&context.target) {
-                config.extend(target_config);
+                sel4_config.extend(target_config);
             }
             if let Some(platform_config) = source_contextual_config.remove(&context.platform) {
-                config.extend(platform_config);
+                sel4_config.extend(platform_config);
             }
 
             Ok(Contextualized {
                 kernel_dir: source.sel4.kernel_dir,
                 tools_dir: source.sel4.tools_dir,
                 context,
-                config,
+                sel4_config,
                 build,
             })
         }
