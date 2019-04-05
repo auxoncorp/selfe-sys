@@ -60,18 +60,17 @@ fn build_libsel4(
     );
 
     for (k, v) in config.config.iter() {
-        match v {
-            confignoble::SingleValue::String(s) => {
-                opts.insert(k.to_owned(), s.to_owned());
-            }
-            confignoble::SingleValue::Integer(i) => {
-                opts.insert(k.to_owned(), format!("{}", i));
-            }
-            confignoble::SingleValue::Float(f) => {
-                opts.insert(k.to_owned(), format!("{}", f));
-            }
-            confignoble::SingleValue::Boolean(b) => {
-                opts.insert(k.to_owned(), format!("{}", b));
+        let v_str = match v {
+            confignoble::SingleValue::String(s) => s.to_owned(),
+            confignoble::SingleValue::Integer(i) => format!("{}", i),
+            confignoble::SingleValue::Float(f) => format!("{}", f),
+            confignoble::SingleValue::Boolean(b) => format!("{}", b),
+        };
+
+        opts.insert(k.to_owned(), v_str);
+        if let confignoble::SingleValue::Boolean(b) = v {
+            if *b {
+                println!("cargo:rustc-cfg={}", k);
             }
         }
     }

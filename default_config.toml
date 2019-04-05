@@ -17,9 +17,11 @@ KernelARMPlatform = 'sabre'
 
 [sel4.config.debug]
 KernelPrinting = true
+KernelDebugBuild = true
 
 [sel4.config.release]
 KernelPrinting = false
+KernelDebugBuild = false
 
 # A poorly thought out idea for toolchain management: 
 [build.pc99]
