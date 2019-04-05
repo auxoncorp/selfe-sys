@@ -2,7 +2,7 @@ use confignoble::*;
 use std::path::PathBuf;
 
 const MINIMAL_EXAMPLE: &str = r#"[sel4]
-default_platform = 'target_arbitrary'
+default_platform = 'platform_arbitrary'
 kernel_dir = './deps/seL4'
 tools_dir = './deps/seL4_tools'
 
@@ -24,7 +24,7 @@ KernelPrinting = false
 [sel4.config.sabre]
 SomeOtherKey = 'hi'
 
-[sel4.config.target_arbitrary]
+[sel4.config.platform_arbitrary]
 SomeOtherKey = 'aloha'
 "#;
 #[test]
@@ -32,7 +32,10 @@ fn full_parse_happy_path() {
     let f: full::Full = MINIMAL_EXAMPLE.parse().expect("could not read toml");
     assert_eq!(PathBuf::from("./deps/seL4"), f.sel4.kernel_dir);
     assert_eq!(PathBuf::from("./deps/seL4_tools"), f.sel4.tools_dir);
-    assert_eq!(Some("target_arbitrary".to_owned()), f.sel4.default_platform);
+    assert_eq!(
+        Some("platform_arbitrary".to_owned()),
+        f.sel4.default_platform
+    );
     assert_eq!(1, f.sel4.config.shared_config.len());
     let shared_retype = f
         .sel4
@@ -62,20 +65,20 @@ fn full_parse_happy_path() {
     let arb_key_sabre = sabre.get("SomeOtherKey").unwrap();
     assert_eq!(&SingleValue::String("hi".to_owned()), arb_key_sabre);
 
-    let target_arbitrary = f
+    let platform_arbitrary = f
         .sel4
         .config
         .contextual_config
-        .get("target_arbitrary")
+        .get("platform_arbitrary")
         .unwrap();
-    assert_eq!(1, target_arbitrary.len());
-    let arb_key_target_arbitrary = target_arbitrary.get("SomeOtherKey").unwrap();
+    assert_eq!(1, platform_arbitrary.len());
+    let arb_key_platform_arbitrary = platform_arbitrary.get("SomeOtherKey").unwrap();
     assert_eq!(
         &SingleValue::String("aloha".to_owned()),
-        arb_key_target_arbitrary
+        arb_key_platform_arbitrary
     );
 
-    let resolved_target_arbitrary_default =
+    let resolved_platform_arbitrary_default =
         contextualized::Contextualized::from_full(f.clone(), "arm32".to_owned(), true, None)
             .unwrap();
     let resolved_sabre = contextualized::Contextualized::from_full(
@@ -85,7 +88,7 @@ fn full_parse_happy_path() {
         Some("sabre".to_owned()),
     )
     .unwrap();
-    assert_ne!(resolved_target_arbitrary_default, resolved_sabre);
+    assert_ne!(resolved_platform_arbitrary_default, resolved_sabre);
 }
 
 #[test]
