@@ -1,6 +1,7 @@
 *** Build for x86
 ```
-      cargo build
+      cd libsel4-sys-gen
+      SEL4_CONFIG_PATH=../default-config.toml cargo build
 ```
     
 *** Build for arm
