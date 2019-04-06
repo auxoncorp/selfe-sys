@@ -22,7 +22,7 @@ where
 /// Return the cmake build dir
 fn build_libsel4(
     kernel_path: &Path,
-    _tools_path: &Path,
+    tools_path: &Path,
     config: &confignoble::contextualized::Contextualized,
 ) -> PathBuf {
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR not defined");
@@ -82,6 +82,7 @@ fn build_libsel4(
             .arg("-G")
             .arg("Ninja")
             .arg(manifest_dir)
+            .env("SEL4_TOOLS_DIR", tools_path)
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit());
         println!("Running cmake: {:?}", &cmake);
