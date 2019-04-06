@@ -7,6 +7,13 @@ use std::{env, fs};
 
 extern crate confignoble;
 
+/// Get the environment variable `var`, or panic with a helpful message if it's
+/// not set.
+fn get_env(var: &str) -> String {
+    env::var(var).expect(&format!("{} must be set", var))
+}
+
+/// cd to `dir`, call `f`, then cd back to the previous working directory.
 fn with_working_dir<F>(dir: &PathBuf, f: F)
 where
     F: Fn() -> (),
@@ -25,10 +32,10 @@ fn build_libsel4(
     tools_path: &Path,
     config: &confignoble::contextualized::Contextualized,
 ) -> PathBuf {
-    let out_dir = env::var("OUT_DIR").expect("OUT_DIR not defined");
+    let out_dir = get_env("OUT_DIR");
     let out_dir = Path::new(&out_dir);
 
-    let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not defined");
+    let manifest_dir = get_env("CARGO_MANIFEST_DIR");
     let manifest_dir = Path::new(&manifest_dir);
 
     let build_dir = out_dir.join("libsel4-build");
@@ -175,7 +182,7 @@ fn gen_bindings(
 
     let bindings = bindings.generate().expect("bindgen didn't work");
 
-    let out_dir = env::var("OUT_DIR").expect("OUT_DIR not defined");
+    let out_dir = get_env("OUT_DIR");
     bindings
         .write_to_file(PathBuf::from(out_dir).join("bindings.rs"))
         .expect("couldn't write bindings");
@@ -210,15 +217,17 @@ fn rust_arch_to_arch(arch: &str) -> String {
     }
 }
 
-fn get_env(var: &str) -> String {
-    env::var(var).expect(&format!("{} must be set", var))
-}
-
 fn main() {
-    env::set_var(
-        "SEL4_CONFIG_PATH",
-        "/home/mullr/devel/confignoble/default_config.toml",
-    );
+    // TODO load a real default config
+    match env::var("SEL4_CONFIG_PATH") {
+        Err(_) => {
+            env::set_var(
+                "SEL4_CONFIG_PATH",
+                "/home/mullr/devel/confignoble/default_config.toml",
+            );
+        }
+        _ => (),
+    }
 
     let config_file_path = get_env("SEL4_CONFIG_PATH");
     println!("cargo:rerun-if-env-changed=SEL4_CONFIG_PATH");
@@ -227,7 +236,10 @@ fn main() {
         .expect(&format!("Config file: {}", config_file_path));
     println!("cargo:rerun-if-file-changed={}", config_file_path.display());
 
-    let config_content = fs::read_to_string(config_file_path).expect("Can't read config file");
+    let config_content = fs::read_to_string(&config_file_path).expect(&format!(
+        "Can't read config file: {}",
+        config_file_path.display()
+    ));
 
     let rust_arch = get_env("CARGO_CFG_TARGET_ARCH");
 
@@ -235,7 +247,7 @@ fn main() {
     let debug = match profile.as_str() {
         "debug" => true,
         "release" => false,
-        _ => panic!("Unexpected value for PROFILE"),
+        _ => panic!("Unexpected value for PROFILE: {}", profile),
     };
 
     let platform = env::var("SEL4_PLATFORM").ok();
@@ -252,19 +264,13 @@ fn main() {
     let sel4_arch = rust_arch_to_sel4_arch(&rust_arch);
     let arch = rust_arch_to_arch(&rust_arch);
 
-    let sel4_path = fs::canonicalize(&Path::new(&config.kernel_dir))
+    let sel4_path = fs::canonicalize(&config.kernel_dir)
         .expect(&format!("Kernel dir: {}", config.kernel_dir.display()));
-    let tools_path = fs::canonicalize(&Path::new(&config.tools_dir))
+    let tools_path = fs::canonicalize(&config.tools_dir)
         .expect(&format!("Tools dir: {}", config.tools_dir.display()));
 
     let target_ptr_width = get_env("CARGO_CFG_TARGET_POINTER_WIDTH");
 
     let build_dir = build_libsel4(&sel4_path, &tools_path, &config);
     gen_bindings(&sel4_path, &build_dir, &sel4_arch, &arch, &target_ptr_width);
-
-    // let build_dir = build_libsel4(&sel4_path, tools_path, None);
-    // gen_bindings(&sel4_path, &build_dir, "x86", "x86_64", 64);
-
-    // let build_dir = build_libsel4(&sel4_path, tools_path, Some("arm-linux-gnueabi-"));
-    // gen_bindings(&sel4_path, &build_dir, "arm", "aarch32", 32);
 }
