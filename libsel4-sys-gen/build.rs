@@ -220,8 +220,15 @@ fn main() {
     );
 
     let config_file_path = get_env("SEL4_CONFIG_PATH");
-    let config_file_path = Path::new(&config_file_path);
+    println!("cargo:rerun-if-env-changed=SEL4_CONFIG_PATH");
+
+    let config_file_path = fs::canonicalize(&Path::new(&config_file_path))
+        .expect(&format!("Config file: {}", config_file_path));
+    println!("cargo:rerun-if-file-changed={}", config_file_path.display());
+
     let config_content = fs::read_to_string(config_file_path).expect("Can't read config file");
+
+    let rust_arch = get_env("CARGO_CFG_TARGET_ARCH");
 
     let profile = get_env("PROFILE");
     let debug = match profile.as_str() {
@@ -230,12 +237,14 @@ fn main() {
         _ => panic!("Unexpected value for PROFILE"),
     };
 
-    let rust_arch = get_env("CARGO_CFG_TARGET_ARCH");
+    let platform = env::var("SEL4_PLATFORM").ok();
+    println!("cargo:rerun-if-env-changed=SEL4_PLATFORM");
+
     let config = confignoble::contextualized::Contextualized::from_str(
         &config_content,
         rust_arch.to_owned(),
         debug,
-        None,
+        platform,
     )
     .expect("Error processing config file");
 
