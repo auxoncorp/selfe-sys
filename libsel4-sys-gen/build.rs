@@ -277,5 +277,10 @@ fn main() {
     let target_ptr_width = get_env("CARGO_CFG_TARGET_POINTER_WIDTH");
 
     let build_dir = build_libsel4(&sel4_path, &tools_path, &config);
+
+    println!("cargo:rerun-if-env-changed=RUSTFLAGS");
+    println!("cargo:rustc-link-lib=static=sel4");
+    println!("cargo:rustc-link-search=native={}/libsel4", build_dir.display());
+
     gen_bindings(&sel4_path, &build_dir, &sel4_arch, &arch, &target_ptr_width);
 }
