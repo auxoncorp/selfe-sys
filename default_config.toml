@@ -14,6 +14,7 @@ KernelX86Sel4Arch = 'x86_64'
 
 [sel4.config.sabre]
 KernelARMPlatform = 'sabre'
+KernelHaveFPU = true
 
 [sel4.config.debug]
 KernelPrinting = true
@@ -25,6 +26,7 @@ KernelDebugBuild = false
 
 # A poorly thought out idea for toolchain management: 
 [build.pc99]
+cross_compiler_prefix = ""
 
 [build.sabre]
 cross_compiler_prefix = "arm-linux-gnueabihf-"
