@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Russell Mull <russell@auxon.io>"]
 edition = "2018"
 
+[lib]
+name = "sel4_sys"
+
 [dependencies]
 static_assertions = "0.3.1"
 
