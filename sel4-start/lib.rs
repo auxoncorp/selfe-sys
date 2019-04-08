@@ -40,7 +40,9 @@ pub const STACK_SIZE: usize = 1024 * 68;
 #[used]
 #[doc(hidden)]
 /// The stack for our initial root task thread.
-static mut STACK: Stack = Stack { stack: [0u8; STACK_SIZE] };
+static mut STACK: Stack = Stack {
+    stack: [0u8; STACK_SIZE],
+};
 
 #[lang = "termination"]
 trait Termination {
@@ -66,7 +68,11 @@ pub unsafe extern "C" fn __sel4_start_init_boot_info(bootinfo: *mut seL4_BootInf
 }
 
 #[lang = "start"]
-fn lang_start<T: Termination + 'static>(main: fn() -> T, _argc: isize, _argv: *const *const u8) -> isize {
+fn lang_start<T: Termination + 'static>(
+    main: fn() -> T,
+    _argc: isize,
+    _argv: *const *const u8,
+) -> isize {
     main();
     0
 }
@@ -83,7 +89,6 @@ impl ::core::fmt::Write for DebugOutHandle {
     }
 }
 
-
 // the initial thread really ought not fail. but if it does, hang.
 // eventually do something smarter. a backtrace might be nice.
 // #[lang = "panic_fmt"]
@@ -93,7 +98,9 @@ pub fn default_panic_fmt(fmt: core::fmt::Arguments, file: &'static str, line: u3
     let _ = write!(DebugOutHandle, "panic at {}:{}: ", file, line);
     let _ = DebugOutHandle.write_fmt(fmt);
     let _ = DebugOutHandle.write_char('\n');
-    unsafe { core::intrinsics::abort(); }
+    unsafe {
+        core::intrinsics::abort();
+    }
 }
 
 #[lang = "oom"]
@@ -104,7 +111,9 @@ pub fn rust_oom(_layout: Layout) -> ! {
 
 #[lang = "eh_personality"]
 fn eh_personality() {
-    unsafe { core::intrinsics::abort(); }
+    unsafe {
+        core::intrinsics::abort();
+    }
 }
 
 /// Returns the address of the bottom of the stack for the initial root task thread.

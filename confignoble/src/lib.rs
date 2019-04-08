@@ -10,10 +10,8 @@ use toml::value::{Table as TomlTable, Value as TomlValue};
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq, Default)]
 pub struct PlatformBuild {
     pub cross_compiler_prefix: Option<String>,
-    pub toolchain_dir: Option<PathBuf>
+    pub toolchain_dir: Option<PathBuf>,
 }
-
-
 
 pub(crate) mod raw {
     use super::*;
@@ -136,7 +134,7 @@ pub mod full {
                     default_platform: raw_content.sel4.default_platform,
                     config: structure_config(raw_content.sel4.config)?,
                 },
-                build: raw_content.build
+                build: raw_content.build,
             })
         }
     }
@@ -288,7 +286,7 @@ pub mod contextualized {
         pub tools_dir: PathBuf,
         pub context: Context,
         pub sel4_config: HashMap<String, SingleValue>,
-        pub build: PlatformBuild
+        pub build: PlatformBuild,
     }
 
     #[derive(Debug, Clone, PartialEq)]
@@ -315,7 +313,6 @@ pub mod contextualized {
             is_debug: bool,
             platform: Option<String>,
         ) -> Result<Contextualized, ImportError> {
-
             let platform = platform
                 .or(source.sel4.default_platform)
                 .ok_or_else(|| ImportError::NoPlatformSupplied)?;
