@@ -1,2 +1,2 @@
 [workspace]
-members = ["confignoble", "libsel4-sys-gen", "sel4-start"]
+members = ["confignoble", "libsel4-sys-gen", "sel4-start", "example"]

@@ -7,12 +7,15 @@
  * notice may not be copied, modified, or distributed except
  * according to those terms.
  */
+
 #![no_std]
 #![feature(lang_items, core_intrinsics, asm, naked_functions)]
-#![doc(html_root_url = "https://doc.robigalia.org/")]
+
+extern crate sel4_sys;
 
 use core::alloc::Layout;
-extern crate sel4_sys;
+use core::panic::PanicInfo;
+use core::fmt::{self, Write};
 use sel4_sys::*;
 
 #[repr(align(4096))]
@@ -45,7 +48,7 @@ static mut STACK: Stack = Stack {
 };
 
 #[lang = "termination"]
-trait Termination {
+pub trait Termination {
     fn report(self) -> i32;
 }
 
@@ -68,7 +71,7 @@ pub unsafe extern "C" fn __sel4_start_init_boot_info(bootinfo: *mut seL4_BootInf
 }
 
 #[lang = "start"]
-fn lang_start<T: Termination + 'static>(
+pub fn lang_start<T: Termination + 'static>(
     main: fn() -> T,
     _argc: isize,
     _argv: *const *const u8,
@@ -77,27 +80,25 @@ fn lang_start<T: Termination + 'static>(
     0
 }
 
-struct DebugOutHandle;
+pub struct DebugOutHandle;
 
-// TODO conditional compilation for this
-impl ::core::fmt::Write for DebugOutHandle {
+impl fmt::Write for DebugOutHandle {
     fn write_str(&mut self, s: &str) -> ::core::fmt::Result {
-        for &b in s.as_bytes() {
-            unsafe { seL4_DebugPutChar(b as i8) };
+        // TODO make these feature flags actually do something
+        // #[cfg(feature = "KernelPrinting")]
+        {
+            for &b in s.as_bytes() {
+                unsafe { seL4_DebugPutChar(b as i8) };
+            }
         }
         Ok(())
     }
 }
 
-// the initial thread really ought not fail. but if it does, hang.
-// eventually do something smarter. a backtrace might be nice.
-// #[lang = "panic_fmt"]
-// TODO conditional compilation for this
-pub fn default_panic_fmt(fmt: core::fmt::Arguments, file: &'static str, line: u32) -> ! {
-    use core::fmt::Write;
-    let _ = write!(DebugOutHandle, "panic at {}:{}: ", file, line);
-    let _ = DebugOutHandle.write_fmt(fmt);
-    let _ = DebugOutHandle.write_char('\n');
+#[allow(unused)]
+pub fn debug_panic_handler(info: &PanicInfo) -> ! {
+    let _res = writeln!(DebugOutHandle, "*** Panic: {:#?}", info);
+
     unsafe {
         core::intrinsics::abort();
     }
@@ -110,7 +111,7 @@ pub fn rust_oom(_layout: Layout) -> ! {
 }
 
 #[lang = "eh_personality"]
-fn eh_personality() {
+pub fn eh_personality() {
     unsafe {
         core::intrinsics::abort();
     }
@@ -129,3 +130,55 @@ include!("x86_64.rs");
 
 #[cfg(all(target_arch = "arm", target_pointer_width = "32"))]
 include!("arm.rs");
+
+ /////////////////////////////////////////////////////////////////////////////////////
+ // libsel4.a contains code that depends on __assert fail and strcp. Since you      //
+ // don't have a libc if you're using sel4-start, provide primitive implementations //
+ // of them here.                                                                   //
+ /////////////////////////////////////////////////////////////////////////////////////
+
+/// A tiny cstr wrapper to enable printing assertion failures
+struct CStr(*const u8);
+
+impl fmt::Display for CStr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        unsafe {
+            let mut p = self.0;
+            loop {
+                if *p == 0 {
+                    break;
+                }
+
+                write!(f, "{}", *p as char)?;
+                p = p.offset(1);
+            }
+        }
+
+        Ok(())
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn __assert_fail(expr: *const u8, file: *const u8, line: i32, func: *const u8) -> ! {
+    panic!(
+        "ASSERT {} in {} at {}:{}",
+        CStr(expr),
+        CStr(func),
+        CStr(file),
+        line
+    );
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn strcpy(dest: *mut u8, mut source: *const u8) -> *const u8 {
+    let mut d = dest;
+    loop {
+        *d = *source;
+        if *d == 0 {
+            return dest;
+        } else {
+            source = source.offset(1);
+            d = d.offset(1);
+        }
+    }
+}
