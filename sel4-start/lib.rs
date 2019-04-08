@@ -8,17 +8,12 @@
  * according to those terms.
  */
 #![no_std]
-#![feature(lang_items, global_allocator, allocator_api, alloc, core_intrinsics, asm, naked_functions, attr_literals, used)]
+#![feature(lang_items, core_intrinsics, asm, naked_functions)]
 #![doc(html_root_url = "https://doc.robigalia.org/")]
 
+use core::alloc::Layout;
 extern crate sel4_sys;
-extern crate sel4;
-
 use sel4_sys::*;
-
-mod alloc;
-
-pub use alloc::*;
 
 #[repr(align(4096))]
 #[doc(hidden)]
@@ -29,17 +24,19 @@ struct Stack {
 
 pub static mut BOOTINFO: *mut seL4_BootInfo = (0 as *mut seL4_BootInfo);
 static mut RUN_ONCE: bool = false;
-#[global_allocator]
-static ALLOCATOR: ScratchAlloc = ScratchAlloc { };
+
 #[used]
 #[doc(hidden)]
 static ENVIRONMENT_STRING: &'static [u8] = b"seL4=1\0\0";
+
 #[used]
 #[doc(hidden)]
 static PROG_NAME: &'static [u8] = b"rootserver\0";
+
 /// The size of the initial root thread stack. This stack is located in the root task image data
 /// section.
 pub const STACK_SIZE: usize = 1024 * 68;
+
 #[used]
 #[doc(hidden)]
 /// The stack for our initial root task thread.
@@ -64,30 +61,44 @@ pub unsafe extern "C" fn __sel4_start_init_boot_info(bootinfo: *mut seL4_BootInf
     if !RUN_ONCE {
         BOOTINFO = bootinfo;
         RUN_ONCE = true;
-        seL4_SetUserData((*bootinfo).ipcBuffer as usize as seL4_Word);
+        seL4_SetUserData((*bootinfo).ipcBuffer as usize);
     }
 }
 
 #[lang = "start"]
 fn lang_start<T: Termination + 'static>(main: fn() -> T, _argc: isize, _argv: *const *const u8) -> isize {
     main();
-    panic!("Root server shouldn't ever return from main!");
+    0
 }
+
+struct DebugOutHandle;
+
+// TODO conditional compilation for this
+impl ::core::fmt::Write for DebugOutHandle {
+    fn write_str(&mut self, s: &str) -> ::core::fmt::Result {
+        for &b in s.as_bytes() {
+            unsafe { seL4_DebugPutChar(b as i8) };
+        }
+        Ok(())
+    }
+}
+
 
 // the initial thread really ought not fail. but if it does, hang.
 // eventually do something smarter. a backtrace might be nice.
-#[lang = "panic_fmt"]
-extern fn panic_fmt(fmt: core::fmt::Arguments, file: &'static str, line: u32) -> ! {
+// #[lang = "panic_fmt"]
+// TODO conditional compilation for this
+pub fn default_panic_fmt(fmt: core::fmt::Arguments, file: &'static str, line: u32) -> ! {
     use core::fmt::Write;
-    let _ = write!(sel4::DebugOutHandle, "panic at {}:{}: ", file, line);
-    let _ = sel4::DebugOutHandle.write_fmt(fmt);
-    let _ = sel4::DebugOutHandle.write_char('\n');
+    let _ = write!(DebugOutHandle, "panic at {}:{}: ", file, line);
+    let _ = DebugOutHandle.write_fmt(fmt);
+    let _ = DebugOutHandle.write_char('\n');
     unsafe { core::intrinsics::abort(); }
 }
 
 #[lang = "oom"]
 #[no_mangle]
-pub fn rust_oom() -> ! {
+pub fn rust_oom(_layout: Layout) -> ! {
     panic!("Root server has run out of memory!");
 }
 
