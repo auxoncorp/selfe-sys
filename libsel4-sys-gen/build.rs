@@ -39,16 +39,19 @@ fn build_libsel4(
     let manifest_dir = Path::new(&manifest_dir);
 
     let build_dir = out_dir.join("libsel4-build");
-    if build_dir.exists() && !build_dir.is_dir() {
-        panic!(
-            "{} already exists, and is not a directory",
-            build_dir.to_str().unwrap()
-        );
+    if build_dir.exists() {
+        if !build_dir.is_dir() {
+            panic!(
+                "{} already exists, and is not a directory",
+                build_dir.to_str().unwrap()
+            );
+        }
+        else {
+            fs::remove_dir_all(&build_dir).expect("Failed to remove existing build dir");
+        }
     }
 
-    if !build_dir.exists() {
-        fs::create_dir(&build_dir).expect("Failed to create build dir");
-    }
+    fs::create_dir(&build_dir).expect("Failed to create build dir");
 
     let mut opts = HashMap::new();
 
