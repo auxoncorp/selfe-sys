@@ -153,6 +153,8 @@ fn gen_bindings(
     sel4_arch: &str,
     ptr_width: &str,
 ) {
+    println!("cargo:rerun-if-file-changed=src/bindgen_wrapper.h");
+
     let mut bindings = Builder::default()
         .header("src/bindgen_wrapper.h")
         .use_core()
