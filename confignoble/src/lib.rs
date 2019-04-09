@@ -19,7 +19,7 @@ pub(crate) mod raw {
     #[derive(Serialize, Deserialize)]
     pub(crate) struct Raw {
         pub(crate) sel4: SeL4,
-        pub(crate) build: HashMap<String, PlatformBuild>,
+        pub(crate) build: Option<HashMap<String, PlatformBuild>>,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -134,7 +134,7 @@ pub mod full {
                     default_platform: raw_content.sel4.default_platform,
                     config: structure_config(raw_content.sel4.config)?,
                 },
-                build: raw_content.build,
+                build: raw_content.build.unwrap_or_else(|| HashMap::new()),
             })
         }
     }
@@ -227,7 +227,7 @@ pub mod full {
                             name: k,
                             expected: "table",
                             found: v.type_str(),
-                        })
+                        });
                     }
                 }
                 continue;
@@ -241,7 +241,7 @@ pub mod full {
                             name: k,
                             expected: "table",
                             found: v.type_str(),
-                        })
+                        });
                     }
                 }
                 continue;
@@ -262,7 +262,7 @@ pub mod full {
                             name: k,
                             expected: "any toml type except array or datetime",
                             found: v.type_str(),
-                        })
+                        });
                     }
                 }
             }
@@ -347,6 +347,15 @@ pub mod contextualized {
                 build,
             })
         }
+
+        pub fn print_boolean_feature_flags(&self) {
+            for (k, v) in self.sel4_config.iter() {
+                match v {
+                    SingleValue::Boolean(true) => println!("cargo:rustc-cfg={}", k),
+                    _ => (),
+                };
+            }
+        }
     }
 }
 
@@ -384,6 +393,7 @@ mod tests {
                     default_platform: None,
                     config: Default::default(),
                 },
+                build: Default::default(),
             }
         }
     }
