@@ -7,12 +7,6 @@ use std::{env, fs};
 
 extern crate confignoble;
 
-/// Get the environment variable `var`, or panic with a helpful message if it's
-/// not set.
-fn get_env(var: &str) -> String {
-    env::var(var).expect(&format!("{} must be set", var))
-}
-
 /// cd to `dir`, call `f`, then cd back to the previous working directory.
 fn with_working_dir<F>(dir: &PathBuf, f: F)
 where
@@ -28,16 +22,12 @@ where
 
 /// Return the cmake build dir
 fn build_libsel4(
+    out_dir: &Path,
+    cargo_manifest_dir: &Path,
     kernel_path: &Path,
     tools_path: &Path,
     config: &confignoble::contextualized::Contextualized,
 ) -> PathBuf {
-    let out_dir = get_env("OUT_DIR");
-    let out_dir = Path::new(&out_dir);
-
-    let manifest_dir = get_env("CARGO_MANIFEST_DIR");
-    let manifest_dir = Path::new(&manifest_dir);
-
     let build_dir = out_dir.join("libsel4-build");
     if build_dir.exists() {
         if !build_dir.is_dir() {
@@ -45,8 +35,7 @@ fn build_libsel4(
                 "{} already exists, and is not a directory",
                 build_dir.to_str().unwrap()
             );
-        }
-        else {
+        } else {
             fs::remove_dir_all(&build_dir).expect("Failed to remove existing build dir");
         }
     }
@@ -78,11 +67,6 @@ fn build_libsel4(
         };
 
         opts.insert(k.to_owned(), v_str);
-        if let confignoble::SingleValue::Boolean(b) = v {
-            if *b {
-                println!("cargo:rustc-cfg={}", k);
-            }
-        }
     }
 
     with_working_dir(&build_dir, || {
@@ -91,7 +75,7 @@ fn build_libsel4(
             .args(opts.iter().map(|(k, v)| format!("-D{}={}", k, v)))
             .arg("-G")
             .arg("Ninja")
-            .arg(manifest_dir)
+            .arg(cargo_manifest_dir)
             .env("SEL4_TOOLS_DIR", tools_path)
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit());
@@ -143,18 +127,19 @@ const KERNEL_INCLUDE_DIRS: &'static [&'static str] = &[
     "libsel4/mode_include/$PTR_WIDTH$",
 ];
 
-fn expand_include_dir(d: &str, arch: &str, sel4_arch: &str, ptr_width: &str) -> String {
+fn expand_include_dir(d: &str, arch: &str, sel4_arch: &str, ptr_width: usize) -> String {
     d.replace("$ARCH$", arch)
         .replace("$SEL4_ARCH$", sel4_arch)
-        .replace("$PTR_WIDTH$", ptr_width)
+        .replace("$PTR_WIDTH$", &format!("{}", ptr_width))
 }
 
 fn gen_bindings(
+    out_dir: &Path,
     kernel_path: &Path,
     libsel4_build_path: &Path,
     arch: &str,
     sel4_arch: &str,
-    ptr_width: &str,
+    ptr_width: usize,
 ) {
     println!("cargo:rerun-if-file-changed=src/bindgen_wrapper.h");
 
@@ -187,7 +172,6 @@ fn gen_bindings(
 
     let bindings = bindings.generate().expect("bindgen didn't work");
 
-    let out_dir = get_env("OUT_DIR");
     bindings
         .write_to_file(PathBuf::from(out_dir).join("bindings.rs"))
         .expect("couldn't write bindings");
@@ -222,65 +206,135 @@ fn rust_arch_to_arch(arch: &str) -> String {
     }
 }
 
-fn main() {
-    // TODO load a real default config
-    match env::var("SEL4_CONFIG_PATH") {
-        Err(_) => {
-            env::set_var(
-                "SEL4_CONFIG_PATH",
-                "/home/mullr/devel/confignoble/default_config.toml",
-            );
+pub struct BuildEnv {
+    cargo_cfg_target_arch: String, // something like x86_64 or arm
+    cargo_cfg_target_pointer_width: usize,
+    cargo_manifest_dir: PathBuf,
+    out_dir: PathBuf,
+    profile: BuildProfile,
+    sel4_config_path: Option<PathBuf>,
+    sel4_platform: Option<String>,
+}
+
+pub enum BuildProfile {
+    Debug,
+    Release,
+}
+impl BuildProfile {
+    pub fn is_debug(&self) -> bool {
+        match self {
+            BuildProfile::Debug => true,
+            _ => false,
         }
-        _ => (),
+    }
+}
+
+impl BuildEnv {
+    pub fn request_reruns() {
+        for e in [
+            "CARGO_CFG_TARGET_ARCH",
+            "CARGO_CFG_TARGET_POINTER_WIDTH",
+            "CARGO_MANIFEST_DIR",
+            "OUT_DIR",
+            "PROFILE",
+            "SEL4_CONFIG_PATH",
+            "SEL4_PLATFORM",
+        ]
+        .iter()
+        {
+            println!("cargo:rerun-if-env-changed={}", e);
+        }
     }
 
-    let config_file_path = get_env("SEL4_CONFIG_PATH");
-    println!("cargo:rerun-if-env-changed=SEL4_CONFIG_PATH");
+    pub fn from_env_vars() -> Self {
+        /// Get the environment variable `var`, or panic with a helpful message if it's
+        /// not set.
+        fn get_env(var: &str) -> String {
+            env::var(var).expect(&format!("{} must be set", var))
+        }
+        let raw_profile = get_env("PROFILE");
+        BuildEnv {
+            cargo_cfg_target_arch: get_env("CARGO_CFG_TARGET_ARCH"),
+            cargo_cfg_target_pointer_width: get_env("CARGO_CFG_TARGET_POINTER_WIDTH")
+                .parse()
+                .expect("Could not parse CARGO_CFG_TARGET_POINTER_WIDTH as an unsigned integer"),
+            cargo_manifest_dir: PathBuf::from(get_env("CARGO_MANIFEST_DIR")),
+            out_dir: PathBuf::from(get_env("OUT_DIR")),
+            profile: match raw_profile.as_str() {
+                "debug" => BuildProfile::Debug,
+                "release" => BuildProfile::Release,
+                _ => panic!("Unexpected value for PROFILE: {}", raw_profile),
+            },
+            sel4_config_path: env::var("SEL4_CONFIG_PATH").ok().map(PathBuf::from),
+            sel4_platform: env::var("SEL4_PLATFORM").ok(),
+        }
+    }
+}
 
-    let config_file_path = fs::canonicalize(&Path::new(&config_file_path))
-        .expect(&format!("Config file: {}", config_file_path));
-    println!("cargo:rerun-if-file-changed={}", config_file_path.display());
+const DEFAULT_CONFIG_CONTENT: &str = include_str!("../default_config.toml");
 
-    let config_content = fs::read_to_string(&config_file_path).expect(&format!(
-        "Can't read config file: {}",
-        config_file_path.display()
-    ));
+fn main() {
+    BuildEnv::request_reruns();
+    let BuildEnv {
+        cargo_cfg_target_arch,
+        cargo_cfg_target_pointer_width,
+        cargo_manifest_dir,
+        out_dir,
+        profile,
+        sel4_config_path,
+        sel4_platform,
+    } = BuildEnv::from_env_vars();
 
-    let rust_arch = get_env("CARGO_CFG_TARGET_ARCH");
-
-    let profile = get_env("PROFILE");
-    let debug = match profile.as_str() {
-        "debug" => true,
-        "release" => false,
-        _ => panic!("Unexpected value for PROFILE: {}", profile),
-    };
-
-    let platform = env::var("SEL4_PLATFORM").ok();
-    println!("cargo:rerun-if-env-changed=SEL4_PLATFORM");
+    let config_content = sel4_config_path
+        .map(|config_file_path| {
+            let config_file_path = fs::canonicalize(&Path::new(&config_file_path))
+                .expect(&format!("Config file: {}", config_file_path.display()));
+            println!("cargo:rerun-if-file-changed={}", config_file_path.display());
+            fs::read_to_string(&config_file_path).expect(&format!(
+                "Can't read config file: {}",
+                config_file_path.display()
+            ))
+        })
+        .unwrap_or_else(|| DEFAULT_CONFIG_CONTENT.to_string());
 
     let config = confignoble::contextualized::Contextualized::from_str(
         &config_content,
-        rust_arch.to_owned(),
-        debug,
-        platform,
+        cargo_cfg_target_arch.to_owned(),
+        profile.is_debug(),
+        sel4_platform,
     )
     .expect("Error processing config file");
 
-    let sel4_arch = rust_arch_to_sel4_arch(&rust_arch);
-    let arch = rust_arch_to_arch(&rust_arch);
+    let sel4_arch = rust_arch_to_sel4_arch(&cargo_cfg_target_arch);
+    let arch = rust_arch_to_arch(&cargo_cfg_target_arch);
 
     let sel4_path = fs::canonicalize(&config.kernel_dir)
         .expect(&format!("Kernel dir: {}", config.kernel_dir.display()));
     let tools_path = fs::canonicalize(&config.tools_dir)
         .expect(&format!("Tools dir: {}", config.tools_dir.display()));
 
-    let target_ptr_width = get_env("CARGO_CFG_TARGET_POINTER_WIDTH");
-
-    let build_dir = build_libsel4(&sel4_path, &tools_path, &config);
+    let build_dir = build_libsel4(
+        &out_dir,
+        &cargo_manifest_dir,
+        &sel4_path,
+        &tools_path,
+        &config,
+    );
+    config.print_boolean_feature_flags();
 
     println!("cargo:rerun-if-env-changed=RUSTFLAGS");
     println!("cargo:rustc-link-lib=static=sel4");
-    println!("cargo:rustc-link-search=native={}/libsel4", build_dir.display());
+    println!(
+        "cargo:rustc-link-search=native={}/libsel4",
+        build_dir.display()
+    );
 
-    gen_bindings(&sel4_path, &build_dir, &sel4_arch, &arch, &target_ptr_width);
+    gen_bindings(
+        &out_dir,
+        &sel4_path,
+        &build_dir,
+        &sel4_arch,
+        &arch,
+        cargo_cfg_target_pointer_width,
+    );
 }

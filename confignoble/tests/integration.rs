@@ -2,7 +2,7 @@ use confignoble::*;
 use std::path::PathBuf;
 
 const MINIMAL_EXAMPLE: &str = r#"[sel4]
-default_platform = 'platform_arbitrary'
+default_platform = 'some_arbitrary_platform'
 kernel_dir = './deps/seL4'
 tools_dir = './deps/seL4_tools'
 
@@ -24,16 +24,26 @@ KernelPrinting = false
 [sel4.config.sabre]
 SomeOtherKey = 'hi'
 
-[sel4.config.platform_arbitrary]
+[sel4.config.some_arbitrary_platform]
 SomeOtherKey = 'aloha'
 "#;
+
+#[test]
+fn reads_from_external_default_file_okay() {
+    let toml_content = include_str!("../../default_config.toml");
+    let f: full::Full = toml_content.parse().expect("could not read toml");
+    assert!(f.sel4.config.shared_config.len() > 0);
+}
+
 #[test]
 fn full_parse_happy_path() {
-    let f: full::Full = MINIMAL_EXAMPLE.parse().expect("could not read toml");
+    let f: full::Full = MINIMAL_EXAMPLE
+        .parse()
+        .expect("could not read toml to full");
     assert_eq!(PathBuf::from("./deps/seL4"), f.sel4.kernel_dir);
     assert_eq!(PathBuf::from("./deps/seL4_tools"), f.sel4.tools_dir);
     assert_eq!(
-        Some("platform_arbitrary".to_owned()),
+        Some("some_arbitrary_platform".to_owned()),
         f.sel4.default_platform
     );
     assert_eq!(1, f.sel4.config.shared_config.len());
@@ -65,20 +75,20 @@ fn full_parse_happy_path() {
     let arb_key_sabre = sabre.get("SomeOtherKey").unwrap();
     assert_eq!(&SingleValue::String("hi".to_owned()), arb_key_sabre);
 
-    let platform_arbitrary = f
+    let some_arbitrary_platform = f
         .sel4
         .config
         .contextual_config
-        .get("platform_arbitrary")
+        .get("some_arbitrary_platform")
         .unwrap();
-    assert_eq!(1, platform_arbitrary.len());
-    let arb_key_platform_arbitrary = platform_arbitrary.get("SomeOtherKey").unwrap();
+    assert_eq!(1, some_arbitrary_platform.len());
+    let arb_key_some_arbitrary_platform = some_arbitrary_platform.get("SomeOtherKey").unwrap();
     assert_eq!(
         &SingleValue::String("aloha".to_owned()),
-        arb_key_platform_arbitrary
+        arb_key_some_arbitrary_platform
     );
 
-    let resolved_platform_arbitrary_default =
+    let resolved_some_arbitrary_platform_default =
         contextualized::Contextualized::from_full(f.clone(), "arm32".to_owned(), true, None)
             .unwrap();
     let resolved_sabre = contextualized::Contextualized::from_full(
@@ -88,7 +98,7 @@ fn full_parse_happy_path() {
         Some("sabre".to_owned()),
     )
     .unwrap();
-    assert_ne!(resolved_platform_arbitrary_default, resolved_sabre);
+    assert_ne!(resolved_some_arbitrary_platform_default, resolved_sabre);
 }
 
 #[test]
@@ -112,21 +122,21 @@ fn happy_path_straight_to_contextualized() {
     assert_eq!("arm32".to_owned(), f.context.target);
     assert_eq!("sabre".to_owned(), f.context.platform);
     assert_eq!(true, f.context.is_debug);
-    assert_eq!(4, f.config.len());
+    assert_eq!(4, f.sel4_config.len());
     assert_eq!(
         &SingleValue::Integer(256),
-        f.config.get("KernelRetypeFanOutLimit").unwrap()
+        f.sel4_config.get("KernelRetypeFanOutLimit").unwrap()
     );
     assert_eq!(
         &SingleValue::Boolean(true),
-        f.config.get("KernelPrinting").unwrap()
+        f.sel4_config.get("KernelPrinting").unwrap()
     );
     assert_eq!(
         &SingleValue::Boolean(true),
-        f.config.get("KernelArmFastMode").unwrap()
+        f.sel4_config.get("KernelArmFastMode").unwrap()
     );
     assert_eq!(
         &SingleValue::String("hi".to_owned()),
-        f.config.get("SomeOtherKey").unwrap()
+        f.sel4_config.get("SomeOtherKey").unwrap()
     );
 }
