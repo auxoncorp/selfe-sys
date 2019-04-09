@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
 use std::path::PathBuf;
+use semver_parser::version::{Version as SemVersion, parse as parse_version};
 use toml::de::Error as TomlDeError;
 use toml::ser::{to_string_pretty, Error as TomlSerError};
 use toml::value::{Table as TomlTable, Value as TomlValue};
@@ -11,6 +12,15 @@ use toml::value::{Table as TomlTable, Value as TomlValue};
 pub struct PlatformBuild {
     pub cross_compiler_prefix: Option<String>,
     pub toolchain_dir: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SeL4Source {
+    Version(SemVersion),
+    LocalDirectories {
+        kernel_dir: PathBuf,
+        tools_dir: PathBuf,
+    },
 }
 
 pub(crate) mod raw {
@@ -24,8 +34,9 @@ pub(crate) mod raw {
 
     #[derive(Serialize, Deserialize)]
     pub(crate) struct SeL4 {
-        pub(crate) kernel_dir: PathBuf,
-        pub(crate) tools_dir: PathBuf,
+        pub(crate) kernel_dir: Option<PathBuf>,
+        pub(crate) tools_dir: Option<PathBuf>,
+        pub(crate) version: Option<String>,
         pub(crate) default_platform: Option<String>,
         pub(crate) config: HashMap<String, TomlValue>,
     }
@@ -91,22 +102,15 @@ pub mod full {
 
     #[derive(Debug, Clone, PartialEq)]
     pub struct SeL4 {
-        pub kernel_dir: PathBuf,
-        pub tools_dir: PathBuf,
+        pub source: SeL4Source,
         pub default_platform: Option<String>,
         pub config: Config,
     }
 
     impl SeL4 {
-        pub fn new(
-            kernel_dir: PathBuf,
-            tools_dir: PathBuf,
-            default_platform: Option<String>,
-            config: Config,
-        ) -> Self {
+        pub fn new(source: SeL4Source, default_platform: Option<String>, config: Config) -> Self {
             SeL4 {
-                kernel_dir,
-                tools_dir,
+                source,
                 default_platform,
                 config,
             }
@@ -125,16 +129,24 @@ pub mod full {
         type Err = ImportError;
 
         fn from_str(s: &str) -> Result<Self, Self::Err> {
-            let raw_content: raw::Raw = toml::from_str(s)?;
+            let raw::Raw { sel4, build } = toml::from_str(s)?;
+
+            let source = match (sel4.kernel_dir, sel4.tools_dir, sel4.version) {
+                (Some(kernel_dir), Some(tools_dir), None) => SeL4Source::LocalDirectories {
+                    kernel_dir,
+                    tools_dir,
+                },
+                (None, None, Some(version)) => SeL4Source::Version(parse_version(&version).map_err(|_ve| ImportError::InvalidSeL4Source)?),
+                (_, _, _) => return Err(ImportError::InvalidSeL4Source),
+            };
 
             Ok(Full {
                 sel4: SeL4 {
-                    kernel_dir: raw_content.sel4.kernel_dir,
-                    tools_dir: raw_content.sel4.tools_dir,
-                    default_platform: raw_content.sel4.default_platform,
-                    config: structure_config(raw_content.sel4.config)?,
+                    source,
+                    default_platform: sel4.default_platform,
+                    config: structure_config(sel4.config)?,
                 },
-                build: raw_content.build.unwrap_or_else(|| HashMap::new()),
+                build: build.unwrap_or_else(|| HashMap::new()),
             })
         }
     }
@@ -142,14 +154,24 @@ pub mod full {
     impl Full {
         pub fn to_toml_string(&self) -> Result<String, TomlSerError> {
             let mut sel4 = TomlTable::new();
-            sel4.insert(
-                "kernel_dir".to_owned(),
-                TomlValue::String(format!("{}", self.sel4.kernel_dir.display())),
-            );
-            sel4.insert(
-                "tools_dir".to_owned(),
-                TomlValue::String(format!("{}", self.sel4.tools_dir.display())),
-            );
+            match &self.sel4.source {
+                SeL4Source::Version(version) => {
+                    sel4.insert("version".to_owned(), TomlValue::String(format!("{}", version)));
+                }
+                SeL4Source::LocalDirectories {
+                    kernel_dir,
+                    tools_dir,
+                } => {
+                    sel4.insert(
+                        "kernel_dir".to_owned(),
+                        TomlValue::String(format!("{}", kernel_dir.display())),
+                    );
+                    sel4.insert(
+                        "tools_dir".to_owned(),
+                        TomlValue::String(format!("{}", tools_dir.display())),
+                    );
+                }
+            }
             if let Some(plat) = &self.sel4.default_platform {
                 sel4.insert(
                     "default_platform".to_owned(),
@@ -282,8 +304,7 @@ pub mod contextualized {
 
     #[derive(Debug, Clone, PartialEq)]
     pub struct Contextualized {
-        pub kernel_dir: PathBuf,
-        pub tools_dir: PathBuf,
+        pub sel4_source: SeL4Source,
         pub context: Context,
         pub sel4_config: HashMap<String, SingleValue>,
         pub build: PlatformBuild,
@@ -340,8 +361,7 @@ pub mod contextualized {
             }
 
             Ok(Contextualized {
-                kernel_dir: source.sel4.kernel_dir,
-                tools_dir: source.sel4.tools_dir,
+                sel4_source: source.sel4.source.clone(),
                 context,
                 sel4_config,
                 build,
@@ -359,6 +379,7 @@ pub mod contextualized {
     }
 }
 
+// TODO - impl Display with helpful user-consumable error messages
 #[derive(Debug)]
 pub enum ImportError {
     TomlDeserializeError(String),
@@ -371,7 +392,9 @@ pub enum ImportError {
         found: &'static str,
     },
     NoPlatformSupplied,
+    InvalidSeL4Source,
 }
+
 
 impl From<TomlDeError> for ImportError {
     fn from(tde: TomlDeError) -> Self {
@@ -388,8 +411,10 @@ mod tests {
         fn empty() -> Self {
             full::Full {
                 sel4: full::SeL4 {
-                    kernel_dir: PathBuf::from("."),
-                    tools_dir: PathBuf::from("."),
+                    source: SeL4Source::LocalDirectories {
+                        kernel_dir: PathBuf::from("."),
+                        tools_dir: PathBuf::from("."),
+                    },
                     default_platform: None,
                     config: Default::default(),
                 },
