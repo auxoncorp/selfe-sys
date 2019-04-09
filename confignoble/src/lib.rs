@@ -1,12 +1,23 @@
 use serde::{Deserialize, Serialize};
 
+use semver_parser::version::{parse as parse_version, Version as SemVersion};
 use std::collections::HashMap;
 use std::error::Error;
+use std::fmt::Display;
 use std::path::PathBuf;
-use semver_parser::version::{Version as SemVersion, parse as parse_version};
 use toml::de::Error as TomlDeError;
 use toml::ser::{to_string_pretty, Error as TomlSerError};
 use toml::value::{Table as TomlTable, Value as TomlValue};
+
+const DEFAULT_CONFIG_CONTENT: &str = include_str!("../../default_config.toml");
+
+/// Produce a unique instance of the default config content
+pub fn get_default_config() -> full::Full {
+    DEFAULT_CONFIG_CONTENT
+        .parse()
+        .map_err(|e| format!("{}", e))
+        .expect("Default config content should always be valid.")
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq, Default)]
 pub struct PlatformBuild {
@@ -136,7 +147,9 @@ pub mod full {
                     kernel_dir,
                     tools_dir,
                 },
-                (None, None, Some(version)) => SeL4Source::Version(parse_version(&version).map_err(|_ve| ImportError::InvalidSeL4Source)?),
+                (None, None, Some(version)) => SeL4Source::Version(
+                    parse_version(&version).map_err(|_ve| ImportError::InvalidSeL4Source)?,
+                ),
                 (_, _, _) => return Err(ImportError::InvalidSeL4Source),
             };
 
@@ -156,7 +169,10 @@ pub mod full {
             let mut sel4 = TomlTable::new();
             match &self.sel4.source {
                 SeL4Source::Version(version) => {
-                    sel4.insert("version".to_owned(), TomlValue::String(format!("{}", version)));
+                    sel4.insert(
+                        "version".to_owned(),
+                        TomlValue::String(format!("{}", version)),
+                    );
                 }
                 SeL4Source::LocalDirectories {
                     kernel_dir,
@@ -379,7 +395,6 @@ pub mod contextualized {
     }
 }
 
-// TODO - impl Display with helpful user-consumable error messages
 #[derive(Debug)]
 pub enum ImportError {
     TomlDeserializeError(String),
@@ -395,6 +410,17 @@ pub enum ImportError {
     InvalidSeL4Source,
 }
 
+impl Display for ImportError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            ImportError::TomlDeserializeError(s) => f.write_fmt(format_args!("Error deserializing toml: {}", s)),
+            ImportError::TypeMismatch { name, expected, found } => f.write_fmt(format_args!("Config toml contained a type mismatch for {}. Found {} when {} was expected", name, found, expected)),
+            ImportError::NonSingleValue { found } => f.write_fmt(format_args!("Config toml contained a type problem where a singular value was expected but, {} was found", found)),
+            ImportError::NoPlatformSupplied => f.write_fmt(format_args!("Config contextualization failed because no platform was supplied and no default was available.")),
+            ImportError::InvalidSeL4Source => f.write_fmt(format_args!("Config toml's [sel4] table must contain either a single `version` property or both `kernel_dir` and `tools_dir` properties.")),
+        }
+    }
+}
 
 impl From<TomlDeError> for ImportError {
     fn from(tde: TomlDeError) -> Self {
@@ -421,6 +447,22 @@ mod tests {
                 build: Default::default(),
             }
         }
+    }
+
+    #[test]
+    fn default_content_is_valid() {
+        let f: full::Full = get_default_config();
+
+        assert_eq!(
+            SeL4Source::Version(SemVersion {
+                major: 10,
+                minor: 0,
+                patch: 0,
+                pre: vec![],
+                build: vec![],
+            }),
+            f.sel4.source
+        )
     }
 
     #[test]

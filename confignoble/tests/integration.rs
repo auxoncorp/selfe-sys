@@ -39,9 +39,7 @@ fn reads_from_external_default_file_okay() {
 
 #[test]
 fn full_parse_happy_path() {
-    let f: full::Full = EXAMPLE
-        .parse()
-        .expect("could not read toml to full");
+    let f: full::Full = EXAMPLE.parse().expect("could not read toml to full");
     assert_eq!(
         SeL4Source::LocalDirectories {
             kernel_dir: PathBuf::from("./deps/seL4"),
@@ -184,10 +182,7 @@ fn happy_path_versioned() {
     let f: full::Full = VERSION_EXAMPLE
         .parse()
         .expect("could not read toml to full");
-    assert_eq!(
-        SeL4Source::Version (simple_version(10, 1, 0)),
-        f.sel4.source
-    );
+    assert_eq!(SeL4Source::Version(simple_version(10, 1, 0)), f.sel4.source);
     let serialized = f.to_toml_string().expect("could not serialize to toml");
     assert_eq!(VERSION_EXAMPLE, serialized);
 }

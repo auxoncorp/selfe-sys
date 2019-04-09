@@ -4,6 +4,7 @@ use semver_parser::version::Version as SemVersion;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::str::FromStr;
 use std::{env, fs};
 
 extern crate confignoble;
@@ -350,8 +351,6 @@ fn is_dir_absent_or_empty(dir_path: &Path) -> bool {
     }
 }
 
-const DEFAULT_CONFIG_CONTENT: &str = include_str!("../default_config.toml");
-
 fn main() {
     BuildEnv::request_reruns();
     let BuildEnv {
@@ -363,29 +362,37 @@ fn main() {
         sel4_config_path,
         sel4_platform,
     } = BuildEnv::from_env_vars();
+    println!("cargo:rerun-if-file-changed=build.rs");
+    println!("cargo:rerun-if-file-changed=src/lib.rs");
+    println!("cargo:rerun-if-file-changed=CMakeLists.txt");
 
-    let config_content = sel4_config_path
+    let full_config = sel4_config_path
         .map(|config_file_path| {
-            let config_file_path = fs::canonicalize(&Path::new(&config_file_path))
-                .expect(&format!("Config file: {}", config_file_path.display()));
+            let config_file_path =
+                fs::canonicalize(&Path::new(&config_file_path)).expect(&format!(
+                    "Config file could not be canonicalized: {}",
+                    config_file_path.display()
+                ));
             println!("cargo:rerun-if-file-changed={}", config_file_path.display());
-            fs::read_to_string(&config_file_path).expect(&format!(
+            let config_content = fs::read_to_string(&config_file_path).expect(&format!(
                 "Can't read config file: {}",
                 config_file_path.display()
-            ))
+            ));
+            confignoble::full::Full::from_str(&config_content)
+                .expect("Error processing config file")
         })
         .unwrap_or_else(|| {
             println!("Using default config content in libsel4-sys-gen");
-            DEFAULT_CONFIG_CONTENT.to_string()
+            confignoble::get_default_config()
         });
 
-    let config = confignoble::contextualized::Contextualized::from_str(
-        &config_content,
+    let config = confignoble::contextualized::Contextualized::from_full(
+        full_config,
         cargo_cfg_target_arch.to_owned(),
         profile.is_debug(),
         sel4_platform,
     )
-    .expect("Error processing config file");
+    .expect("Error resolving config file");
 
     let sel4_arch = rust_arch_to_sel4_arch(&cargo_cfg_target_arch);
     let arch = rust_arch_to_arch(&cargo_cfg_target_arch);
