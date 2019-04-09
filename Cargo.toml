@@ -1,2 +1,3 @@
 [workspace]
-members = ["confignoble", "libsel4-sys-gen", "sel4-start", "example"]
+members = ["confignoble", "libsel4-sys-gen", "sel4-start"]
+exclude = ["example"]

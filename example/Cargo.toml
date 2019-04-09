@@ -8,7 +8,7 @@ edition = "2018"
 sel4-start = { path="../sel4-start" }
 libsel4-sys-gen = { path = "../libsel4-sys-gen" }
 
-[profile.debug]
+[profile.dev]
 panic = "abort"
 
 [profile.release]
