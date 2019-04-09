@@ -1,7 +1,7 @@
 set -e
 
 cd example
-RUSTFLAGS="-C link-arg=-no-pie -C link-arg=-nostdlib" xargo build --target=x86_64-unknown-linux-gnu
+xargo build --target=x86_64-unknown-linux-gnu
 cd ..
 
 mkdir kernel-build
