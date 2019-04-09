@@ -9,7 +9,7 @@ use toml::de::Error as TomlDeError;
 use toml::ser::{to_string_pretty, Error as TomlSerError};
 use toml::value::{Table as TomlTable, Value as TomlValue};
 
-const DEFAULT_CONFIG_CONTENT: &str = include_str!("../../default_config.toml");
+const DEFAULT_CONFIG_CONTENT: &str = include_str!("default_config.toml");
 
 /// Produce a unique instance of the default config content
 pub fn get_default_config() -> full::Full {
