@@ -13,6 +13,7 @@
 
 extern crate sel4_sys;
 
+#[cfg(not(test))]
 use core::alloc::Layout;
 use core::panic::PanicInfo;
 use core::fmt::{self, Write};
@@ -48,10 +49,12 @@ static mut STACK: Stack = Stack {
 };
 
 #[lang = "termination"]
+#[cfg(not(test))]
 pub trait Termination {
     fn report(self) -> i32;
 }
 
+#[cfg(not(test))]
 impl Termination for () {
     fn report(self) -> i32 {
         0
@@ -71,6 +74,7 @@ pub unsafe extern "C" fn __sel4_start_init_boot_info(bootinfo: *mut seL4_BootInf
 }
 
 #[lang = "start"]
+#[cfg(not(test))]
 pub fn lang_start<T: Termination + 'static>(
     main: fn() -> T,
     _argc: isize,
@@ -106,11 +110,13 @@ pub fn debug_panic_handler(info: &PanicInfo) -> ! {
 
 #[lang = "oom"]
 #[no_mangle]
+#[cfg(not(test))]
 pub fn rust_oom(_layout: Layout) -> ! {
     panic!("Root server has run out of memory!");
 }
 
 #[lang = "eh_personality"]
+#[cfg(not(test))]
 pub fn eh_personality() {
     unsafe {
         core::intrinsics::abort();

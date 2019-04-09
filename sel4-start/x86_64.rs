@@ -11,6 +11,7 @@
 #[doc(hidden)]
 #[naked]
 #[no_mangle]
+#[cfg(not(test))]
 /// This is the entry point to the root task image. Set up the stack, stash the boot
 /// info, then call the rust-generated main function.
 ///
