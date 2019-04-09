@@ -67,11 +67,8 @@ mod compile_time_assertions {
         seL4_NBRecv;
     const SEL4_CALL: unsafe extern "C" fn(seL4_CPtr, seL4_MessageInfo) -> seL4_MessageInfo =
         seL4_Call;
-    const SEL4_REPLYRECV: unsafe extern "C" fn(
-        seL4_CPtr,
-        seL4_MessageInfo,
-        *mut seL4_Word,
-    ) -> seL4_MessageInfo = seL4_ReplyRecv;
+    const SEL4_REPLYRECV: unsafe extern "C" fn(seL4_CPtr, seL4_MessageInfo, *mut seL4_Word)
+        -> seL4_MessageInfo = seL4_ReplyRecv;
     const SEL4_YIELD: unsafe extern "C" fn() = seL4_Yield;
     const SEL4_WAIT: unsafe extern "C" fn(seL4_CPtr, *mut seL4_Word) = seL4_Wait;
     const SEL4_POLL: unsafe extern "C" fn(seL4_CPtr, *mut seL4_Word) -> seL4_MessageInfo =
@@ -137,12 +134,8 @@ mod compile_time_assertions {
         seL4_TCB_SetPriority;
     const TCB_SETMCPRIORITY: unsafe extern "C" fn(seL4_TCB, seL4_CPtr, seL4_Word) -> seL4_Error =
         seL4_TCB_SetMCPriority;
-    const TCB_SETSCHEDPARAMS: unsafe extern "C" fn(
-        seL4_TCB,
-        seL4_CPtr,
-        seL4_Word,
-        seL4_Word,
-    ) -> seL4_Error = seL4_TCB_SetSchedParams;
+    const TCB_SETSCHEDPARAMS: unsafe extern "C" fn(seL4_TCB, seL4_CPtr, seL4_Word, seL4_Word)
+        -> seL4_Error = seL4_TCB_SetSchedParams;
     const TCB_SETIPCBUFFER: unsafe extern "C" fn(seL4_TCB, seL4_Word, seL4_CPtr) -> seL4_Error =
         seL4_TCB_SetIPCBuffer;
     const TCB_SETSPACE: unsafe extern "C" fn(
@@ -163,11 +156,8 @@ mod compile_time_assertions {
         seL4_CNode_Revoke;
     const CNODE_DELETE: unsafe extern "C" fn(seL4_CNode, seL4_Word, seL4_Uint8) -> seL4_Error =
         seL4_CNode_Delete;
-    const CNODE_CANCELBADGEDSENDS: unsafe extern "C" fn(
-        seL4_CNode,
-        seL4_Word,
-        seL4_Uint8,
-    ) -> seL4_Error = seL4_CNode_CancelBadgedSends;
+    const CNODE_CANCELBADGEDSENDS: unsafe extern "C" fn(seL4_CNode, seL4_Word, seL4_Uint8)
+        -> seL4_Error = seL4_CNode_CancelBadgedSends;
     const CNODE_COPY: unsafe extern "C" fn(
         seL4_CNode,
         seL4_Word,
@@ -227,10 +217,8 @@ mod compile_time_assertions {
         seL4_Uint8,
     ) -> seL4_Error = seL4_IRQControl_Get;
     const IRQHANDLER_ACK: unsafe extern "C" fn(seL4_IRQHandler) -> seL4_Error = seL4_IRQHandler_Ack;
-    const IRQHANDLER_SETNOTIFICATION: unsafe extern "C" fn(
-        seL4_IRQHandler,
-        seL4_CPtr,
-    ) -> seL4_Error = seL4_IRQHandler_SetNotification;
+    const IRQHANDLER_SETNOTIFICATION: unsafe extern "C" fn(seL4_IRQHandler, seL4_CPtr)
+        -> seL4_Error = seL4_IRQHandler_SetNotification;
     const IRQHANDLER_CLEAR: unsafe extern "C" fn(seL4_IRQHandler) -> seL4_Error =
         seL4_IRQHandler_Clear;
     const DOMAINSET_SET: unsafe extern "C" fn(seL4_DomainSet, seL4_Uint8, seL4_TCB) -> seL4_Error =

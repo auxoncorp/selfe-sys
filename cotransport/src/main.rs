@@ -2,7 +2,9 @@ use std::path::{Path, PathBuf};
 use std::{env, fs};
 
 extern crate confignoble;
-use confignoble::compilation::{build_sel4, SeL4BuildMode, resolve_sel4_source, ResolvedSeL4Source};
+use confignoble::compilation::{
+    build_sel4, resolve_sel4_source, ResolvedSeL4Source, SeL4BuildMode,
+};
 
 /// Walk up the directory tree from `start_dir`, looking for "sel4.toml"
 fn find_sel4_toml(start_dir: &Path) -> Option<PathBuf> {
@@ -57,5 +59,11 @@ fn main() {
     } = resolve_sel4_source(&config.sel4_source, &out_dir.join("source"))
         .expect("resolve sel4 source");
 
-    build_sel4(&out_dir.join("build"), &kernel_dir, &tools_dir, &config, SeL4BuildMode::Kernel);
+    build_sel4(
+        &out_dir.join("build"),
+        &kernel_dir,
+        &tools_dir,
+        &config,
+        SeL4BuildMode::Kernel,
+    );
 }

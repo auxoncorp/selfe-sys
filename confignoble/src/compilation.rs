@@ -1,10 +1,10 @@
 use crate::model;
-use std::{fs, env};
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
-use std::collections::hash_map::DefaultHasher;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::{env, fs};
 
 use semver_parser::version::Version as SemVersion;
 
@@ -170,7 +170,7 @@ pub fn resolve_sel4_source(
 #[derive(PartialEq, Eq, Copy, Clone)]
 pub enum SeL4BuildMode {
     Kernel,
-    Lib
+    Lib,
 }
 
 /// Return the cmake build dir

@@ -13,7 +13,8 @@ fn main() {
         DebugOutHandle,
         "Thing from bootinfo: numNodes={}",
         bootinfo.numNodes
-    ).unwrap();
+    )
+    .unwrap();
 }
 
 #[panic_handler]

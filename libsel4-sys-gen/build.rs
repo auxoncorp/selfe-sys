@@ -5,7 +5,9 @@ use std::str::FromStr;
 use std::{env, fs};
 
 extern crate confignoble;
-use confignoble::compilation::{resolve_sel4_source, ResolvedSeL4Source, build_sel4, SeL4BuildMode};
+use confignoble::compilation::{
+    build_sel4, resolve_sel4_source, ResolvedSeL4Source, SeL4BuildMode,
+};
 
 const BLACKLIST_TYPES: &'static [&'static str] = &[
     "seL4_CPtr",
@@ -229,13 +231,12 @@ fn main() {
     } = resolve_sel4_source(&config.sel4_source, &out_dir.join("sel4_source"))
         .expect("resolve sel4 source");
 
-
     let build_dir = build_sel4(
         &out_dir,
         &kernel_dir,
         &tools_dir,
         &config,
-        SeL4BuildMode::Lib
+        SeL4BuildMode::Lib,
     );
     config.print_boolean_feature_flags();
 
