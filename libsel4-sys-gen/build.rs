@@ -28,7 +28,7 @@ fn build_libsel4(
     cargo_manifest_dir: &Path,
     kernel_path: &Path,
     tools_path: &Path,
-    config: &confignoble::contextualized::Contextualized,
+    config: &confignoble::model::contextualized::Contextualized,
 ) -> PathBuf {
     let build_dir = out_dir.join("libsel4-build");
     if build_dir.exists() {
@@ -62,9 +62,9 @@ fn build_libsel4(
 
     for (k, v) in config.sel4_config.iter() {
         let v_str = match v {
-            confignoble::SingleValue::String(s) => s.to_owned(),
-            confignoble::SingleValue::Integer(i) => format!("{}", i),
-            confignoble::SingleValue::Boolean(b) => format!("{}", b),
+            confignoble::model::SingleValue::String(s) => s.to_owned(),
+            confignoble::model::SingleValue::Integer(i) => format!("{}", i),
+            confignoble::model::SingleValue::Boolean(b) => format!("{}", b),
         };
 
         opts.insert(k.to_owned(), v_str);
@@ -377,15 +377,15 @@ fn main() {
                 "Can't read config file: {}",
                 config_file_path.display()
             ));
-            confignoble::full::Full::from_str(&config_content)
+            confignoble::model::full::Full::from_str(&config_content)
                 .expect("Error processing config file")
         })
         .unwrap_or_else(|| {
             println!("Using default config content in libsel4-sys-gen");
-            confignoble::get_default_config()
+            confignoble::model::get_default_config()
         });
 
-    let config = confignoble::contextualized::Contextualized::from_full(
+    let config = confignoble::model::contextualized::Contextualized::from_full(
         full_config,
         cargo_cfg_target_arch.to_owned(),
         profile.is_debug(),
@@ -397,7 +397,7 @@ fn main() {
     let arch = rust_arch_to_arch(&cargo_cfg_target_arch);
 
     let (sel4_path, tools_path) = match &config.sel4_source {
-        confignoble::SeL4Source::LocalDirectories {
+        confignoble::model::SeL4Source::LocalDirectories {
             kernel_dir,
             tools_dir,
         } => (
@@ -410,7 +410,7 @@ fn main() {
                 &tools_dir.display()
             )),
         ),
-        confignoble::SeL4Source::Version(v) => {
+        confignoble::model::SeL4Source::Version(v) => {
             // Confirm we can support the requested version
             let _kernel_sha = version_to_sel4_kernel_release_sha(&v)
                 .expect(&format!("Unsupported version: {}", v));

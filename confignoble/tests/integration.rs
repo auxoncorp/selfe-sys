@@ -1,4 +1,4 @@
-use confignoble::*;
+use confignoble::model::*;
 use std::path::PathBuf;
 
 const EXAMPLE: &str = r#"[sel4]
