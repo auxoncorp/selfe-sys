@@ -41,7 +41,12 @@ fn find_sel4_toml(start_dir: &Path) -> Option<PathBuf> {
 }
 
 /// Return the cmake build dir
-fn build_sel4(out_dir: &Path, config: &confignoble::contextualized::Contextualized) -> PathBuf {
+fn build_sel4(
+    out_dir: &Path,
+    kernel_dir: &Path,
+    tools_dir: &Path,
+    config: &confignoble::contextualized::Contextualized,
+) -> PathBuf {
     let mut opts = BTreeMap::new();
 
     if let Some(prefix) = &config.build.cross_compiler_prefix {
@@ -50,12 +55,9 @@ fn build_sel4(out_dir: &Path, config: &confignoble::contextualized::Contextualiz
 
     opts.insert(
         "CMAKE_TOOLCHAIN_FILE".to_string(),
-        config.kernel_dir.join("gcc.cmake").display().to_string(),
+        kernel_dir.join("gcc.cmake").display().to_string(),
     );
-    opts.insert(
-        "KERNEL_PATH".to_string(),
-        config.kernel_dir.display().to_string(),
-    );
+    opts.insert("KERNEL_PATH".to_string(), kernel_dir.display().to_string());
 
     for (k, v) in config.sel4_config.iter() {
         let v_str = match v {
@@ -97,7 +99,7 @@ fn build_sel4(out_dir: &Path, config: &confignoble::contextualized::Contextualiz
             .arg("-G")
             .arg("Ninja")
             .arg(".")
-            .env("SEL4_TOOLS_DIR", config.tools_dir.to_owned())
+            .env("SEL4_TOOLS_DIR", tools_dir.to_owned())
             // TODO wire this up to the config
             .env("ROOT_TASK_PATH", "/home/mullr/devel/confignoble/example/target/x86_64-unknown-linux-gnu/debug/example")
             .stdout(Stdio::inherit())
@@ -144,5 +146,22 @@ fn main() {
     )
     .expect("Can't process config");
 
-    build_sel4(&pwd.join("target"), &config);
+    let (kernel_dir, tools_dir) = match &config.sel4_source {
+        confignoble::SeL4Source::LocalDirectories {
+            kernel_dir,
+            tools_dir,
+        } => (
+            fs::canonicalize(&kernel_dir).expect(&format!(
+                "Canonicalization failed for local kernel dir: {}",
+                &kernel_dir.display()
+            )),
+            fs::canonicalize(&tools_dir).expect(&format!(
+                "Canonicalization failed for local tools dir: {}",
+                &tools_dir.display()
+            )),
+        ),
+        confignoble::SeL4Source::Version(_) => unimplemented!(),
+    };
+
+    build_sel4(&pwd.join("target"), &kernel_dir, &tools_dir, &config);
 }

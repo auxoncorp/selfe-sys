@@ -25,7 +25,7 @@ pub struct PlatformBuild {
     pub toolchain_dir: Option<PathBuf>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub enum SeL4Source {
     Version(SemVersion),
     LocalDirectories {
