@@ -62,7 +62,6 @@ fn build_libsel4(
         let v_str = match v {
             confignoble::SingleValue::String(s) => s.to_owned(),
             confignoble::SingleValue::Integer(i) => format!("{}", i),
-            confignoble::SingleValue::Float(f) => format!("{}", f),
             confignoble::SingleValue::Boolean(b) => format!("{}", b),
         };
 

@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::error::Error;
 use std::path::PathBuf;
 use toml::de::Error as TomlDeError;
 use toml::ser::{to_string_pretty, Error as TomlSerError};
 use toml::value::{Table as TomlTable, Value as TomlValue};
 
-#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq, Default, Hash)]
 pub struct PlatformBuild {
     pub cross_compiler_prefix: Option<String>,
     pub toolchain_dir: Option<PathBuf>,
@@ -19,7 +19,7 @@ pub(crate) mod raw {
     #[derive(Serialize, Deserialize)]
     pub(crate) struct Raw {
         pub(crate) sel4: SeL4,
-        pub(crate) build: Option<HashMap<String, PlatformBuild>>,
+        pub(crate) build: Option<BTreeMap<String, PlatformBuild>>,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -27,15 +27,14 @@ pub(crate) mod raw {
         pub(crate) kernel_dir: PathBuf,
         pub(crate) tools_dir: PathBuf,
         pub(crate) default_platform: Option<String>,
-        pub(crate) config: HashMap<String, TomlValue>,
+        pub(crate) config: BTreeMap<String, TomlValue>,
     }
 }
 
-#[derive(Clone, Debug, PartialOrd, PartialEq)]
+#[derive(Clone, Debug, PartialOrd, PartialEq, Hash)]
 pub enum SingleValue {
     String(String),
     Integer(i64),
-    Float(f64),
     Boolean(bool),
 }
 
@@ -44,13 +43,13 @@ impl SingleValue {
         match t {
             TomlValue::String(s) => Ok(SingleValue::String(s)),
             TomlValue::Integer(i) => Ok(SingleValue::Integer(i)),
-            TomlValue::Float(f) => Ok(SingleValue::Float(f)),
             TomlValue::Boolean(b) => Ok(SingleValue::Boolean(b)),
-            TomlValue::Table(_) | TomlValue::Datetime(_) | TomlValue::Array(_) => {
-                Err(ImportError::NonSingleValue {
-                    found: t.type_str(),
-                })
-            }
+            TomlValue::Float(_)
+            | TomlValue::Table(_)
+            | TomlValue::Datetime(_)
+            | TomlValue::Array(_) => Err(ImportError::NonSingleValue {
+                found: t.type_str(),
+            }),
         }
     }
 
@@ -58,7 +57,6 @@ impl SingleValue {
         match self {
             SingleValue::String(s) => TomlValue::String(s.clone()),
             SingleValue::Integer(i) => TomlValue::Integer(*i),
-            SingleValue::Float(f) => TomlValue::Float(*f),
             SingleValue::Boolean(b) => TomlValue::Boolean(*b),
         }
     }
@@ -67,7 +65,7 @@ impl SingleValue {
         let sv = SingleValue::from_toml(v).map_err(|e| match e {
             ImportError::NonSingleValue { found } => ImportError::TypeMismatch {
                 name: k.clone(),
-                expected: "a single string, integer, float, or boolean",
+                expected: "a single string, integer, or boolean",
                 found,
             },
             _ => e,
@@ -86,7 +84,7 @@ pub mod full {
     #[derive(Debug, Clone, PartialEq)]
     pub struct Full {
         pub sel4: SeL4,
-        pub build: HashMap<String, PlatformBuild>,
+        pub build: BTreeMap<String, PlatformBuild>,
     }
 
     #[derive(Debug, Clone, PartialEq)]
@@ -115,10 +113,10 @@ pub mod full {
 
     #[derive(Debug, Default, Clone, PartialEq)]
     pub struct Config {
-        pub shared_config: HashMap<String, SingleValue>,
-        pub debug_config: HashMap<String, SingleValue>,
-        pub release_config: HashMap<String, SingleValue>,
-        pub contextual_config: HashMap<String, HashMap<String, SingleValue>>,
+        pub shared_config: BTreeMap<String, SingleValue>,
+        pub debug_config: BTreeMap<String, SingleValue>,
+        pub release_config: BTreeMap<String, SingleValue>,
+        pub contextual_config: BTreeMap<String, BTreeMap<String, SingleValue>>,
     }
 
     impl std::str::FromStr for Full {
@@ -134,7 +132,7 @@ pub mod full {
                     default_platform: raw_content.sel4.default_platform,
                     config: structure_config(raw_content.sel4.config)?,
                 },
-                build: raw_content.build.unwrap_or_else(|| HashMap::new()),
+                build: raw_content.build.unwrap_or_else(|| BTreeMap::new()),
             })
         }
     }
@@ -207,15 +205,16 @@ pub mod full {
 
     fn toml_table_to_map_of_singles(
         t: toml::value::Table,
-    ) -> Result<HashMap<String, SingleValue>, ImportError> {
+    ) -> Result<BTreeMap<String, SingleValue>, ImportError> {
         t.into_iter().map(SingleValue::single_pair).collect()
     }
 
-    fn structure_config(rc: HashMap<String, TomlValue>) -> Result<Config, ImportError> {
-        let mut shared_config: HashMap<String, SingleValue> = HashMap::new();
-        let mut debug_config: Option<HashMap<String, SingleValue>> = None;
-        let mut release_config: Option<HashMap<String, SingleValue>> = None;
-        let mut contextual_config: HashMap<String, HashMap<String, SingleValue>> = HashMap::new();
+    fn structure_config(rc: BTreeMap<String, TomlValue>) -> Result<Config, ImportError> {
+        let mut shared_config: BTreeMap<String, SingleValue> = BTreeMap::new();
+        let mut debug_config: Option<BTreeMap<String, SingleValue>> = None;
+        let mut release_config: Option<BTreeMap<String, SingleValue>> = None;
+        let mut contextual_config: BTreeMap<String, BTreeMap<String, SingleValue>> =
+            BTreeMap::new();
         for (k, v) in rc.into_iter() {
             if k == "debug" {
                 match v {
@@ -247,20 +246,17 @@ pub mod full {
                 continue;
             } else {
                 match v {
-                    TomlValue::String(_)
-                    | TomlValue::Integer(_)
-                    | TomlValue::Float(_)
-                    | TomlValue::Boolean(_) => {
+                    TomlValue::String(_) | TomlValue::Integer(_) | TomlValue::Boolean(_) => {
                         let (k, v) = SingleValue::single_pair((k, v))?;
                         shared_config.insert(k, v);
                     }
                     TomlValue::Table(t) => {
                         contextual_config.insert(k, toml_table_to_map_of_singles(t)?);
                     }
-                    TomlValue::Datetime(_) | TomlValue::Array(_) => {
+                    TomlValue::Float(_) | TomlValue::Datetime(_) | TomlValue::Array(_) => {
                         return Err(ImportError::TypeMismatch {
                             name: k,
-                            expected: "any toml type except array or datetime",
+                            expected: "any toml type except float, array, or datetime",
                             found: v.type_str(),
                         });
                     }
@@ -270,8 +266,8 @@ pub mod full {
 
         Ok(Config {
             shared_config,
-            debug_config: debug_config.unwrap_or_else(HashMap::new),
-            release_config: release_config.unwrap_or_else(HashMap::new),
+            debug_config: debug_config.unwrap_or_else(BTreeMap::new),
+            release_config: release_config.unwrap_or_else(BTreeMap::new),
             contextual_config,
         })
     }
@@ -280,16 +276,16 @@ pub mod full {
 pub mod contextualized {
     use super::*;
 
-    #[derive(Debug, Clone, PartialEq)]
+    #[derive(Debug, Clone, PartialEq, Hash)]
     pub struct Contextualized {
         pub kernel_dir: PathBuf,
         pub tools_dir: PathBuf,
         pub context: Context,
-        pub sel4_config: HashMap<String, SingleValue>,
+        pub sel4_config: BTreeMap<String, SingleValue>,
         pub build: PlatformBuild,
     }
 
-    #[derive(Debug, Clone, PartialEq)]
+    #[derive(Debug, Clone, PartialEq, Hash)]
     pub struct Context {
         pub target: String,
         pub platform: String,
