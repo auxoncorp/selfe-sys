@@ -6,7 +6,7 @@ use std::{env, fs};
 
 extern crate confignoble;
 use confignoble::compilation::{
-    build_sel4, resolve_sel4_source, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome
+    build_sel4, resolve_sel4_source, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome,
 };
 
 const BLACKLIST_TYPES: &'static [&'static str] = &[
@@ -241,7 +241,7 @@ fn main() {
     } = resolve_sel4_source(&config.sel4_source, &out_dir.join("sel4_source"))
         .expect("resolve sel4 source");
 
-    let build_dir = if let SeL4BuildOutcome::StaticLib { build_dir }= build_sel4(
+    let build_dir = if let SeL4BuildOutcome::StaticLib { build_dir } = build_sel4(
         &out_dir,
         &kernel_dir,
         &tools_dir,

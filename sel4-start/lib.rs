@@ -15,8 +15,8 @@ extern crate sel4_sys;
 
 #[cfg(not(test))]
 use core::alloc::Layout;
-use core::panic::PanicInfo;
 use core::fmt::{self, Write};
+use core::panic::PanicInfo;
 use sel4_sys::*;
 
 #[repr(align(4096))]
@@ -137,11 +137,11 @@ include!("x86_64.rs");
 #[cfg(all(target_arch = "arm", target_pointer_width = "32"))]
 include!("arm.rs");
 
- /////////////////////////////////////////////////////////////////////////////////////
- // libsel4.a contains code that depends on __assert fail and strcp. Since you      //
- // don't have a libc if you're using sel4-start, provide primitive implementations //
- // of them here.                                                                   //
- /////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////
+// libsel4.a contains code that depends on __assert fail and strcp. Since you      //
+// don't have a libc if you're using sel4-start, provide primitive implementations //
+// of them here.                                                                   //
+/////////////////////////////////////////////////////////////////////////////////////
 
 /// A tiny cstr wrapper to enable printing assertion failures
 struct CStr(*const u8);

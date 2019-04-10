@@ -3,7 +3,7 @@ use std::{env, fs};
 
 extern crate confignoble;
 use confignoble::compilation::{
-    build_sel4, resolve_sel4_source, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome
+    build_sel4, resolve_sel4_source, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome,
 };
 
 /// Walk up the directory tree from `start_dir`, looking for "sel4.toml"
@@ -37,7 +37,9 @@ fn main() {
             .expect("sel4.toml was not found in the current tree, and SEL4_CONFIG was not set");
         PathBuf::from(&cfg)
     });
-    let config_file_dir = config_file_path.parent().expect("Can't get parent of config file path");
+    let config_file_dir = config_file_path
+        .parent()
+        .expect("Can't get parent of config file path");
 
     let config_content = fs::read_to_string(&config_file_path).expect(&format!(
         "Can't read config file: {}",
@@ -68,15 +70,16 @@ fn main() {
         &config,
         SeL4BuildMode::Kernel,
     ) {
-        SeL4BuildOutcome::StaticLib { .. } => panic!("Should not be making a static lib when a kernel is expected"),
+        SeL4BuildOutcome::StaticLib { .. } => {
+            panic!("Should not be making a static lib when a kernel is expected")
+        }
         SeL4BuildOutcome::Kernel {
             build_dir,
             kernel_path,
-
         } => {
             println!("{}", build_dir.display());
             println!("{}", kernel_path.display());
-        },
+        }
         SeL4BuildOutcome::KernelAndRootImage {
             build_dir,
             kernel_path,
@@ -85,6 +88,6 @@ fn main() {
             println!("{}", build_dir.display());
             println!("{}", kernel_path.display());
             println!("{}", root_image_path.display());
-        },
+        }
     }
 }

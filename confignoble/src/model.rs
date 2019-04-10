@@ -435,7 +435,10 @@ pub mod full {
                         source.as_ref().map(|v| {
                             let mut prof_table = TomlTable::new();
                             prof_table.insert_str("make_root_task", v.make_root_task.as_ref());
-                            prof_table.insert_str("root_task_image", format!("{}", v.root_task_image.display()));
+                            prof_table.insert_str(
+                                "root_task_image",
+                                format!("{}", v.root_task_image.display()),
+                            );
                             prof_table
                         })
                     }
@@ -545,7 +548,7 @@ impl RelativePath for Path {
         if self.is_relative() {
             match base {
                 Some(p) => p.join(self),
-                None => self.to_path_buf()
+                None => self.to_path_buf(),
             }
         } else {
             self.to_path_buf()
@@ -586,7 +589,7 @@ pub mod contextualized {
             target: String,
             is_debug: bool,
             platform: Option<String>,
-            base_dir: Option<&Path>
+            base_dir: Option<&Path>,
         ) -> Result<Contextualized, ImportError> {
             let f: full::Full = source_toml.parse()?;
             Self::from_full(f, target, is_debug, platform, base_dir)
@@ -597,7 +600,7 @@ pub mod contextualized {
             target: String,
             is_debug: bool,
             platform: Option<String>,
-            base_dir: Option<&Path>
+            base_dir: Option<&Path>,
         ) -> Result<Contextualized, ImportError> {
             let platform = platform
                 .or(source.sel4.default_platform)
@@ -628,7 +631,9 @@ pub mod contextualized {
             })?;
             let build = Build {
                 cross_compiler_prefix: platform_build.cross_compiler_prefix,
-                toolchain_dir: platform_build.toolchain_dir.map(|p| p.relative_to(base_dir)),
+                toolchain_dir: platform_build
+                    .toolchain_dir
+                    .map(|p| p.relative_to(base_dir)),
                 make_root_task: build_profile.make_root_task,
                 root_task_image: build_profile.root_task_image.relative_to(base_dir),
             };
@@ -651,10 +656,13 @@ pub mod contextualized {
             Ok(Contextualized {
                 sel4_source: match source.sel4.source {
                     SeL4Source::Version(v) => SeL4Source::Version(v),
-                    SeL4Source::LocalDirectories {kernel_dir, tools_dir} => SeL4Source::LocalDirectories {
+                    SeL4Source::LocalDirectories {
+                        kernel_dir,
+                        tools_dir,
+                    } => SeL4Source::LocalDirectories {
                         kernel_dir: kernel_dir.relative_to(base_dir),
                         tools_dir: tools_dir.relative_to(base_dir),
-                    }
+                    },
                 },
                 context,
                 sel4_config,

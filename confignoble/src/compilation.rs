@@ -115,7 +115,10 @@ pub fn resolve_sel4_source(
         model::SeL4Source::LocalDirectories {
             kernel_dir,
             tools_dir,
-        } => Ok(ResolvedSeL4Source {kernel_dir: kernel_dir.to_owned(), tools_dir: tools_dir.to_owned()}),
+        } => Ok(ResolvedSeL4Source {
+            kernel_dir: kernel_dir.to_owned(),
+            tools_dir: tools_dir.to_owned(),
+        }),
         model::SeL4Source::Version(v) => {
             // Confirm we can support the requested version
             let _kernel_sha = version_to_sel4_kernel_release_sha(&v)
@@ -175,7 +178,7 @@ pub enum SeL4BuildOutcome {
         build_dir: PathBuf,
         kernel_path: PathBuf,
         root_image_path: PathBuf,
-    }
+    },
 }
 
 /// Return the cmake build dir
@@ -252,7 +255,10 @@ pub fn build_sel4(
             .env("SEL4_TOOLS_DIR", tools_dir.to_owned());
 
         if build_mode == SeL4BuildMode::Kernel {
-            cmake.env("ROOT_TASK_PATH", PathBuf::from(&config.build.root_task_image));
+            cmake.env(
+                "ROOT_TASK_PATH",
+                PathBuf::from(&config.build.root_task_image),
+            );
         }
 
         cmake.stdout(Stdio::inherit()).stderr(Stdio::inherit());
@@ -275,23 +281,31 @@ pub fn build_sel4(
         assert!(output.status.success());
     });
 
-    let sel4_arch = cmake_opts.get("KernelSel4Arch").expect("KernelSel4Arch missing but required as a sel4 config option");
-    let kernel_platform = cmake_opts.get("KernelPlatform").expect("KernelPlatform missing but required as a sel4 config option");
+    let sel4_arch = cmake_opts
+        .get("KernelSel4Arch")
+        .expect("KernelSel4Arch missing but required as a sel4 config option");
+    let kernel_platform = cmake_opts
+        .get("KernelPlatform")
+        .expect("KernelPlatform missing but required as a sel4 config option");
     match build_mode {
         SeL4BuildMode::Kernel => match config.context.target.as_ref() {
             "x86_64" | "x86" => SeL4BuildOutcome::KernelAndRootImage {
                 build_dir: build_dir.clone(),
-                kernel_path: build_dir.join("images").join(format!("kernel-{}-{}", sel4_arch, kernel_platform)),
-                root_image_path: build_dir.join("images").join(format!("root_task-image-{}-{}", sel4_arch, kernel_platform)),
+                kernel_path: build_dir
+                    .join("images")
+                    .join(format!("kernel-{}-{}", sel4_arch, kernel_platform)),
+                root_image_path: build_dir
+                    .join("images")
+                    .join(format!("root_task-image-{}-{}", sel4_arch, kernel_platform)),
             },
             "arm" | "aarch32" | "arm32" | "aarch64" => SeL4BuildOutcome::Kernel {
                 build_dir: build_dir.clone(),
-                kernel_path: build_dir.join("images").join(format!("root_task-image-arm-{}", kernel_platform))
+                kernel_path: build_dir
+                    .join("images")
+                    .join(format!("root_task-image-arm-{}", kernel_platform)),
             },
-            _ => panic!("Unsupported target")
+            _ => panic!("Unsupported target"),
         },
-        SeL4BuildMode::Lib => SeL4BuildOutcome::StaticLib {
-            build_dir
-        },
+        SeL4BuildMode::Lib => SeL4BuildOutcome::StaticLib { build_dir },
     }
 }
