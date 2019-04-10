@@ -4,25 +4,12 @@ use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::{env, fs};
+use std::fs;
 
 use semver_parser::version::Version as SemVersion;
 
 const CMAKELISTS_KERNEL: &str = include_str!("CMakeLists_kernel.txt");
 const CMAKELISTS_LIB: &str = include_str!("CMakeLists_lib.txt");
-
-/// cd to `dir`, call `f`, then cd back to the previous working directory.
-pub fn with_working_dir<F>(dir: &PathBuf, f: F)
-where
-    F: Fn() -> (),
-{
-    let pwd = env::current_dir().expect("Failed to get current dir");
-    env::set_current_dir(&dir).expect(format!("Can't cd to {}", dir.display()).as_str());
-
-    f();
-
-    env::set_current_dir(&pwd).expect("Can't cd back to initial working dir");
-}
 
 /// Finds the relevant sha in the seL4/seL4_tools github repository that is supposedly
 /// compatible with the supplied version of seL4.
@@ -245,41 +232,43 @@ pub fn build_sel4(
     fs::create_dir_all(&build_dir).expect("Failed to create build dir");
     fs::write(build_dir.join("CMakeLists.txt"), cmake_lists_content).unwrap();
 
-    with_working_dir(&build_dir, || {
-        let mut cmake = Command::new("cmake");
-        cmake
-            .args(cmake_opts.iter().map(|(k, v)| format!("-D{}={}", k, v)))
-            .arg("-G")
-            .arg("Ninja")
-            .arg(".")
-            .env("SEL4_TOOLS_DIR", tools_dir.to_owned());
+    // Run CMake
+    let mut cmake = Command::new("cmake");
+    cmake
+        .args(cmake_opts.iter().map(|(k, v)| format!("-D{}={}", k, v)))
+        .arg("-G")
+        .arg("Ninja")
+        .arg(".")
+        .current_dir(&build_dir)
+        .env("SEL4_TOOLS_DIR", tools_dir.to_owned());
 
-        if build_mode == SeL4BuildMode::Kernel {
-            cmake.env(
-                "ROOT_TASK_PATH",
-                PathBuf::from(&config.build.root_task_image),
-            );
-        }
+    if build_mode == SeL4BuildMode::Kernel {
+        cmake.env(
+            "ROOT_TASK_PATH",
+            PathBuf::from(&config.build.root_task_image),
+        );
+    }
 
-        cmake.stdout(Stdio::inherit()).stderr(Stdio::inherit());
-        println!("Running cmake: {:?}", &cmake);
+    cmake.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+    println!("Running cmake: {:?}", &cmake);
 
-        let output = cmake.output().expect("failed to run cmake");
-        assert!(output.status.success());
+    let output = cmake.output().expect("failed to run cmake");
+    assert!(output.status.success());
 
-        let mut ninja = Command::new("ninja");
-        ninja
-            .arg(match build_mode {
-                SeL4BuildMode::Kernel => "all",
-                SeL4BuildMode::Lib => "libsel4.a",
-            })
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit());
-        println!("Running ninja: {:?}", &ninja);
+    // Run ninja
+    let mut ninja = Command::new("ninja");
+    ninja
+        .arg(match build_mode {
+            SeL4BuildMode::Kernel => "all",
+            SeL4BuildMode::Lib => "libsel4.a",
+        })
+        .current_dir(&build_dir)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+    println!("Running ninja: {:?}", &ninja);
 
-        let output = ninja.output().expect("failed to run ninja");
-        assert!(output.status.success());
-    });
+    let output = ninja.output().expect("failed to run ninja");
+    assert!(output.status.success());
 
     let sel4_arch = cmake_opts
         .get("KernelSel4Arch")
