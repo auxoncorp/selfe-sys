@@ -32,7 +32,7 @@ SomeOtherKey = 'aloha'
 
 #[test]
 fn reads_from_external_default_file_okay() {
-    let toml_content = include_str!("../../default_config.toml");
+    let toml_content = include_str!("../src/default_config.toml");
     let f: full::Full = toml_content.parse().expect("could not read toml");
     assert!(f.sel4.config.shared_config.len() > 0);
 }

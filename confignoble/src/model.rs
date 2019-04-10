@@ -1,5 +1,3 @@
-use serde::{Deserialize, Serialize};
-
 use semver_parser::version::{parse as parse_version, Version as SemVersion};
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -19,7 +17,7 @@ pub fn get_default_config() -> full::Full {
         .expect("Default config content should always be valid.")
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq, Default, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Default, Hash)]
 pub struct PlatformBuild {
     pub cross_compiler_prefix: Option<String>,
     pub toolchain_dir: Option<PathBuf>,
@@ -37,19 +35,132 @@ pub enum SeL4Source {
 pub(crate) mod raw {
     use super::*;
 
-    #[derive(Serialize, Deserialize)]
     pub(crate) struct Raw {
         pub(crate) sel4: SeL4,
         pub(crate) build: Option<BTreeMap<String, PlatformBuild>>,
     }
 
-    #[derive(Serialize, Deserialize)]
     pub(crate) struct SeL4 {
         pub(crate) kernel_dir: Option<PathBuf>,
         pub(crate) tools_dir: Option<PathBuf>,
         pub(crate) version: Option<String>,
         pub(crate) default_platform: Option<String>,
         pub(crate) config: BTreeMap<String, TomlValue>,
+    }
+
+    impl std::str::FromStr for Raw {
+        type Err = ImportError;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            let top: TomlValue = toml::from_str(s)?;
+            let top: &TomlTable = top.as_table().ok_or_else(|| ImportError::TypeMismatch {
+                name: "top-level".to_string(),
+                expected: "table",
+                found: top.type_str(),
+            })?;
+
+            fn parse_sel4(table: &TomlTable) -> Result<SeL4, ImportError> {
+                let kernel_dir = parse_optional_string(table, "kernel_dir")?.map(PathBuf::from);
+                let tools_dir = parse_optional_string(table, "tools_dir")?.map(PathBuf::from);
+                let version = parse_optional_string(table, "version")?;
+                let default_platform = parse_optional_string(table, "default_platform")?;
+                let raw_config = table
+                    .get("config")
+                    .ok_or_else(|| ImportError::TypeMismatch {
+                        name: "config".to_string(),
+                        expected: "table",
+                        found: "none",
+                    })?;
+                let config_table =
+                    raw_config
+                        .as_table()
+                        .ok_or_else(|| ImportError::TypeMismatch {
+                            name: "config".to_string(),
+                            expected: "table",
+                            found: raw_config.type_str(),
+                        })?;
+                let mut config = BTreeMap::new();
+                for (k, v) in config_table.iter() {
+                    config.insert(k.to_owned(), v.clone());
+                }
+                Ok(SeL4 {
+                    kernel_dir,
+                    tools_dir,
+                    version,
+                    default_platform,
+                    config,
+                })
+            }
+
+            fn parse_optional_string(
+                table: &TomlTable,
+                key: &str,
+            ) -> Result<Option<String>, ImportError> {
+                if let Some(val) = table.get(key) {
+                    Ok(Some(val.as_str().map(|s| s.to_owned()).ok_or_else(
+                        || ImportError::TypeMismatch {
+                            name: key.to_string(),
+                            expected: "string",
+                            found: val.type_str(),
+                        },
+                    )?))
+                } else {
+                    Ok(None)
+                }
+            }
+
+            fn parse_build(
+                table: &TomlTable,
+            ) -> Result<BTreeMap<String, PlatformBuild>, ImportError> {
+                let mut map = BTreeMap::new();
+                for (k, v) in table.iter() {
+                    if let Some(plat_table) = v.as_table() {
+                        let cross_compiler_prefix =
+                            parse_optional_string(plat_table, "cross_compiler_prefix")?;
+                        let toolchain_dir =
+                            parse_optional_string(plat_table, "toolchain_dir")?.map(PathBuf::from);
+                        map.insert(
+                            k.to_string(),
+                            PlatformBuild {
+                                cross_compiler_prefix,
+                                toolchain_dir,
+                            },
+                        );
+                    } else {
+                        return Err(ImportError::TypeMismatch {
+                            name: k.to_string(),
+                            expected: "table",
+                            found: v.type_str(),
+                        });
+                    }
+                }
+                Ok(map)
+            }
+
+            let sel4 = parse_sel4(top.get("sel4").and_then(TomlValue::as_table).ok_or_else(
+                || ImportError::TypeMismatch {
+                    name: "sel4".to_string(),
+                    expected: "table",
+                    found: "none",
+                },
+            )?)?;
+
+            let build = if let Some(build_val) = top.get("build") {
+                let build_table =
+                    build_val
+                        .as_table()
+                        .ok_or_else(|| ImportError::TypeMismatch {
+                            name: "build".to_string(),
+                            expected: "table",
+                            found: build_val.type_str(),
+                        })?;
+                Some(parse_build(build_table)?)
+            } else {
+                None
+            };
+
+            Ok(Raw { sel4, build })
+        }
     }
 }
 
@@ -138,7 +249,7 @@ pub mod full {
         type Err = ImportError;
 
         fn from_str(s: &str) -> Result<Self, Self::Err> {
-            let raw::Raw { sel4, build } = toml::from_str(s)?;
+            let raw::Raw { sel4, build } = s.parse()?;
 
             let source = match (sel4.kernel_dir, sel4.tools_dir, sel4.version) {
                 (Some(kernel_dir), Some(tools_dir), None) => SeL4Source::LocalDirectories {
