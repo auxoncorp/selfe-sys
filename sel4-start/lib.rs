@@ -88,8 +88,7 @@ pub struct DebugOutHandle;
 
 impl fmt::Write for DebugOutHandle {
     fn write_str(&mut self, s: &str) -> ::core::fmt::Result {
-        // TODO make these feature flags actually do something
-        // #[cfg(feature = "KernelPrinting")]
+        #[cfg(KernelPrinting)]
         {
             for &b in s.as_bytes() {
                 unsafe { seL4_DebugPutChar(b as i8) };

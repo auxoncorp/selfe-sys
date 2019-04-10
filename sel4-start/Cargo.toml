@@ -19,3 +19,6 @@ libsel4-sys-gen = { path = "../libsel4-sys-gen" }
 
 [lib]
 path = "lib.rs"
+
+[build-dependencies]
+confignoble = { path = "../confignoble" }
