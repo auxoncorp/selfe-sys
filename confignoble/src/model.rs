@@ -17,12 +17,6 @@ pub fn get_default_config() -> full::Full {
         .expect("Default config content should always be valid.")
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Default, Hash)]
-pub struct PlatformBuild {
-    pub cross_compiler_prefix: Option<String>,
-    pub toolchain_dir: Option<PathBuf>,
-}
-
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub enum SeL4Source {
     Version(SemVersion),
@@ -33,6 +27,7 @@ pub enum SeL4Source {
 }
 
 pub(crate) mod raw {
+    use super::full::{PlatformBuild, PlatformBuildProfile};
     use super::*;
 
     pub(crate) struct Raw {
@@ -109,23 +104,31 @@ pub(crate) mod raw {
                 }
             }
 
+            fn parse_required_string(table: &TomlTable, key: &str) -> Result<String, ImportError> {
+                if let Some(val) = table.get(key) {
+                    Ok(val.as_str().map(|s| s.to_owned()).ok_or_else(|| {
+                        ImportError::TypeMismatch {
+                            name: key.to_string(),
+                            expected: "string",
+                            found: val.type_str(),
+                        }
+                    })?)
+                } else {
+                    Err(ImportError::TypeMismatch {
+                        name: key.to_string(),
+                        expected: "string",
+                        found: "none",
+                    })
+                }
+            }
+
             fn parse_build(
                 table: &TomlTable,
             ) -> Result<BTreeMap<String, PlatformBuild>, ImportError> {
                 let mut map = BTreeMap::new();
                 for (k, v) in table.iter() {
                     if let Some(plat_table) = v.as_table() {
-                        let cross_compiler_prefix =
-                            parse_optional_string(plat_table, "cross_compiler_prefix")?;
-                        let toolchain_dir =
-                            parse_optional_string(plat_table, "toolchain_dir")?.map(PathBuf::from);
-                        map.insert(
-                            k.to_string(),
-                            PlatformBuild {
-                                cross_compiler_prefix,
-                                toolchain_dir,
-                            },
-                        );
+                        map.insert(k.to_string(), parse_platform_build(plat_table)?);
                     } else {
                         return Err(ImportError::TypeMismatch {
                             name: k.to_string(),
@@ -135,6 +138,57 @@ pub(crate) mod raw {
                     }
                 }
                 Ok(map)
+            }
+            fn parse_platform_build(table: &TomlTable) -> Result<PlatformBuild, ImportError> {
+                let cross_compiler_prefix = parse_optional_string(table, "cross_compiler_prefix")?;
+                let toolchain_dir =
+                    parse_optional_string(table, "toolchain_dir")?.map(PathBuf::from);
+
+                let debug_build_profile = if let Some(v) = table.get("debug") {
+                    if let Some(profile_table) = v.as_table() {
+                        Some(PlatformBuildProfile {
+                            make_root_task: parse_required_string(profile_table, "make_root_task")?,
+                            root_task_image: parse_required_string(
+                                profile_table,
+                                "root_task_image",
+                            )?,
+                        })
+                    } else {
+                        return Err(ImportError::TypeMismatch {
+                            name: "debug".to_string(),
+                            expected: "table",
+                            found: v.type_str(),
+                        });
+                    }
+                } else {
+                    None
+                };
+
+                let release_build_profile = if let Some(v) = table.get("release") {
+                    if let Some(profile_table) = v.as_table() {
+                        Some(PlatformBuildProfile {
+                            make_root_task: parse_required_string(profile_table, "make_root_task")?,
+                            root_task_image: parse_required_string(
+                                profile_table,
+                                "root_task_image",
+                            )?,
+                        })
+                    } else {
+                        return Err(ImportError::TypeMismatch {
+                            name: "release".to_string(),
+                            expected: "table",
+                            found: v.type_str(),
+                        });
+                    }
+                } else {
+                    None
+                };
+                Ok(PlatformBuild {
+                    cross_compiler_prefix,
+                    toolchain_dir,
+                    debug_build_profile,
+                    release_build_profile,
+                })
             }
 
             let sel4 = parse_sel4(top.get("sel4").and_then(TomlValue::as_table).ok_or_else(
@@ -227,6 +281,20 @@ pub mod full {
         pub config: Config,
     }
 
+    #[derive(Debug, Clone, Eq, PartialEq, Default, Hash)]
+    pub struct PlatformBuild {
+        pub cross_compiler_prefix: Option<String>,
+        pub toolchain_dir: Option<PathBuf>,
+        pub debug_build_profile: Option<PlatformBuildProfile>,
+        pub release_build_profile: Option<PlatformBuildProfile>,
+    }
+
+    #[derive(Debug, Clone, Eq, PartialEq, Default, Hash)]
+    pub struct PlatformBuildProfile {
+        pub make_root_task: String,
+        pub root_task_image: String,
+    }
+
     impl SeL4 {
         pub fn new(source: SeL4Source, default_platform: Option<String>, config: Config) -> Self {
             SeL4 {
@@ -273,82 +341,126 @@ pub mod full {
         }
     }
 
+    /// Helper extension trait to make toml generation a little less verbose
+    trait TomlTableExt {
+        fn insert_str<K: Into<String>, V: Into<String>>(
+            &mut self,
+            key: K,
+            value: V,
+        ) -> Option<TomlValue>;
+        fn insert_table<K: Into<String>>(&mut self, key: K, value: TomlTable) -> Option<TomlValue>;
+    }
+
+    impl TomlTableExt for TomlTable {
+        fn insert_str<K: Into<String>, V: Into<String>>(
+            &mut self,
+            key: K,
+            value: V,
+        ) -> Option<TomlValue> {
+            self.insert(key.into(), TomlValue::String(value.into()))
+        }
+
+        fn insert_table<K: Into<String>>(&mut self, key: K, value: TomlTable) -> Option<TomlValue> {
+            self.insert(key.into(), TomlValue::Table(value))
+        }
+    }
+
     impl Full {
-        pub fn to_toml_string(&self) -> Result<String, TomlSerError> {
+        fn to_toml(&self) -> TomlTable {
             let mut sel4 = TomlTable::new();
             match &self.sel4.source {
                 SeL4Source::Version(version) => {
-                    sel4.insert(
-                        "version".to_owned(),
-                        TomlValue::String(format!("{}", version)),
-                    );
+                    sel4.insert_str("version", format!("{}", version));
                 }
                 SeL4Source::LocalDirectories {
                     kernel_dir,
                     tools_dir,
                 } => {
-                    sel4.insert(
-                        "kernel_dir".to_owned(),
-                        TomlValue::String(format!("{}", kernel_dir.display())),
-                    );
-                    sel4.insert(
-                        "tools_dir".to_owned(),
-                        TomlValue::String(format!("{}", tools_dir.display())),
-                    );
+                    sel4.insert_str("kernel_dir", format!("{}", kernel_dir.display()));
+                    sel4.insert_str("tools_dir", format!("{}", tools_dir.display()));
                 }
             }
+
             if let Some(plat) = &self.sel4.default_platform {
-                sel4.insert(
-                    "default_platform".to_owned(),
-                    TomlValue::String(plat.to_owned()),
-                );
+                sel4.insert_str("default_platform", plat.as_ref());
             }
-            let mut config = TomlTable::new();
-            config.extend(
-                self.sel4
-                    .config
-                    .shared_config
-                    .iter()
-                    .map(SingleValue::toml_pair),
-            );
-            if !self.sel4.config.debug_config.is_empty() {
-                config.insert(
-                    "debug".to_owned(),
-                    TomlValue::Table(
-                        self.sel4
-                            .config
+
+            fn serialize_config(sel4_config: &Config) -> TomlTable {
+                let mut config = TomlTable::new();
+                config.extend(sel4_config.shared_config.iter().map(SingleValue::toml_pair));
+                if !sel4_config.debug_config.is_empty() {
+                    config.insert_table(
+                        "debug",
+                        sel4_config
                             .debug_config
                             .iter()
                             .map(SingleValue::toml_pair)
                             .collect(),
-                    ),
-                );
-            }
-            if !self.sel4.config.release_config.is_empty() {
-                config.insert(
-                    "release".to_owned(),
-                    TomlValue::Table(
-                        self.sel4
-                            .config
+                    );
+                }
+                if !sel4_config.release_config.is_empty() {
+                    config.insert_table(
+                        "release",
+                        sel4_config
                             .release_config
                             .iter()
                             .map(SingleValue::toml_pair)
                             .collect(),
-                    ),
-                );
+                    );
+                }
+                for (k, t) in sel4_config.contextual_config.iter() {
+                    config.insert_table(k.as_ref(), t.iter().map(SingleValue::toml_pair).collect());
+                }
+                config
             }
-            for (k, t) in self.sel4.config.contextual_config.iter() {
-                config.insert(
-                    k.to_owned(),
-                    TomlValue::Table(t.iter().map(SingleValue::toml_pair).collect()),
-                );
-            }
+            sel4.insert_table("config", serialize_config(&self.sel4.config));
 
-            sel4.insert("config".to_owned(), TomlValue::Table(config));
+            fn serialize_build(source: &BTreeMap<String, PlatformBuild>) -> Option<TomlTable> {
+                if source.is_empty() {
+                    return None;
+                }
+                let mut build = TomlTable::new();
+                for (k, plat) in source.iter() {
+                    let mut plat_table = TomlTable::new();
+                    if let Some(ref v) = plat.cross_compiler_prefix {
+                        plat_table.insert_str("cross_compiler_prefix", v.as_ref());
+                    }
+                    if let Some(ref v) = plat.toolchain_dir {
+                        plat_table.insert_str("toolchain_dir", format!("{}", v.display()));
+                    }
+
+                    fn serialize_profile_build(
+                        source: &Option<PlatformBuildProfile>,
+                    ) -> Option<TomlTable> {
+                        source.as_ref().map(|v| {
+                            let mut prof_table = TomlTable::new();
+                            prof_table.insert_str("make_root_task", v.make_root_task.as_ref());
+                            prof_table.insert_str("root_task_image", v.root_task_image.as_ref());
+                            prof_table
+                        })
+                    }
+                    if let Some(t) = serialize_profile_build(&plat.debug_build_profile) {
+                        plat_table.insert_table("debug", t);
+                    }
+                    if let Some(t) = serialize_profile_build(&plat.release_build_profile) {
+                        plat_table.insert_table("release", t);
+                    }
+                    build.insert_table(k.as_ref(), plat_table);
+                }
+                Some(build)
+            }
 
             let mut top = TomlTable::new();
-            top.insert("sel4".to_owned(), TomlValue::Table(sel4));
-            to_string_pretty(&top)
+            top.insert_table("sel4", sel4);
+            if let Some(build) = serialize_build(&self.build) {
+                top.insert_table("build", build);
+            }
+            top
+        }
+
+        /// Serialize the full contents to a toml string
+        pub fn to_toml_string(&self) -> Result<String, TomlSerError> {
+            to_string_pretty(&self.to_toml())
         }
     }
 
@@ -430,7 +542,15 @@ pub mod contextualized {
         pub sel4_source: SeL4Source,
         pub context: Context,
         pub sel4_config: BTreeMap<String, SingleValue>,
-        pub build: PlatformBuild,
+        pub build: Build,
+    }
+
+    #[derive(Debug, Clone, Eq, PartialEq, Default, Hash)]
+    pub struct Build {
+        pub cross_compiler_prefix: Option<String>,
+        pub toolchain_dir: Option<PathBuf>,
+        pub make_root_task: String,
+        pub root_task_image: String,
     }
 
     #[derive(Debug, Clone, PartialEq, Hash)]
@@ -460,14 +580,36 @@ pub mod contextualized {
             let platform = platform
                 .or(source.sel4.default_platform)
                 .ok_or_else(|| ImportError::NoPlatformSupplied)?;
-
-            let build = source.build.remove(&platform).unwrap_or_default();
-
             let context = Context {
-                platform,
+                platform: platform.clone(),
                 target,
                 is_debug,
             };
+
+            let platform_build =
+                source
+                    .build
+                    .remove(&platform)
+                    .ok_or_else(|| ImportError::NoBuildSupplied {
+                        platform: platform.clone(),
+                        profile: if is_debug { "debug" } else { "release " },
+                    })?;
+            let build_profile = if is_debug {
+                platform_build.debug_build_profile
+            } else {
+                platform_build.release_build_profile
+            };
+            let build_profile = build_profile.ok_or_else(|| ImportError::NoBuildSupplied {
+                platform: platform.clone(),
+                profile: if is_debug { "debug" } else { "release " },
+            })?;
+            let build = Build {
+                cross_compiler_prefix: platform_build.cross_compiler_prefix,
+                toolchain_dir: platform_build.toolchain_dir,
+                make_root_task: build_profile.make_root_task,
+                root_task_image: build_profile.root_task_image,
+            };
+
             let source_config = source.sel4.config;
             let mut sel4_config = source_config.shared_config;
             if is_debug {
@@ -513,8 +655,12 @@ pub enum ImportError {
     NonSingleValue {
         found: &'static str,
     },
-    NoPlatformSupplied,
     InvalidSeL4Source,
+    NoPlatformSupplied,
+    NoBuildSupplied {
+        platform: String,
+        profile: &'static str,
+    },
 }
 
 impl Display for ImportError {
@@ -525,6 +671,7 @@ impl Display for ImportError {
             ImportError::NonSingleValue { found } => f.write_fmt(format_args!("Config toml contained a type problem where a singular value was expected but, {} was found", found)),
             ImportError::NoPlatformSupplied => f.write_fmt(format_args!("Config contextualization failed because no platform was supplied and no default was available.")),
             ImportError::InvalidSeL4Source => f.write_fmt(format_args!("Config toml's [sel4] table must contain either a single `version` property or both `kernel_dir` and `tools_dir` properties.")),
+            ImportError::NoBuildSupplied { platform, profile } => f.write_fmt(format_args!("Config toml must contain a [build.platform.profile] table like [build.{}.{}] but none was supplied.", platform, profile)),
         }
     }
 }
@@ -590,11 +737,25 @@ mod tests {
         let mut f = full::Full::empty();
         let expected = "pc99".to_owned();
         f.sel4.default_platform = Some(expected.clone());
+        f.build.insert(
+            expected.clone(),
+            full::PlatformBuild {
+                cross_compiler_prefix: None,
+                toolchain_dir: None,
+                debug_build_profile: Some(full::PlatformBuildProfile {
+                    make_root_task: "cmake".to_string(),
+                    root_task_image: "over_here".to_string(),
+                }),
+                release_build_profile: None,
+            },
+        );
         let c =
             contextualized::Contextualized::from_full(f, "target".to_owned(), true, None).unwrap();
         assert_eq!(expected, c.context.platform);
         assert_eq!(true, c.context.is_debug);
         assert_eq!("target".to_owned(), c.context.target);
+        assert_eq!("cmake", c.build.make_root_task);
+        assert_eq!("over_here", c.build.root_task_image);
     }
 
     #[test]
@@ -603,6 +764,18 @@ mod tests {
         let expected = "sabre".to_owned();
         let default = "pc99".to_owned();
         f.sel4.default_platform = Some(default.clone());
+        f.build.insert(
+            expected.clone(),
+            full::PlatformBuild {
+                cross_compiler_prefix: None,
+                toolchain_dir: None,
+                debug_build_profile: None,
+                release_build_profile: Some(full::PlatformBuildProfile {
+                    make_root_task: "cmake".to_string(),
+                    root_task_image: "over_here".to_string(),
+                }),
+            },
+        );
         let c = contextualized::Contextualized::from_full(
             f,
             "target".to_owned(),
@@ -613,5 +786,7 @@ mod tests {
         assert_eq!(expected, c.context.platform);
         assert_eq!(false, c.context.is_debug);
         assert_eq!("target".to_owned(), c.context.target);
+        assert_eq!("cmake", c.build.make_root_task);
+        assert_eq!("over_here", c.build.root_task_image);
     }
 }

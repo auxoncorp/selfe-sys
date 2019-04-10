@@ -1,7 +1,22 @@
 use confignoble::model::*;
 use std::path::PathBuf;
 
-const EXAMPLE: &str = r#"[sel4]
+const EXAMPLE: &str = r#"[build.sabre.debug]
+make_root_task = 'cmake debug'
+root_task_image = 'debug_image'
+
+[build.sabre.release]
+make_root_task = 'cmake release'
+root_task_image = 'release_image'
+[build.some_arbitrary_platform.debug]
+make_root_task = 'cmake debug'
+root_task_image = 'debug_image'
+
+[build.some_arbitrary_platform.release]
+make_root_task = 'cmake release'
+root_task_image = 'release_image'
+
+[sel4]
 default_platform = 'some_arbitrary_platform'
 kernel_dir = './deps/seL4'
 tools_dir = './deps/seL4_tools'
