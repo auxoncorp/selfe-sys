@@ -32,7 +32,6 @@ fn main() {
     let target_arch = "x86_64";
 
     let pwd = &env::current_dir().unwrap();
-
     let config_file_path = find_sel4_toml(&pwd).unwrap_or_else(|| {
         let cfg = env::var("SEL4_CONFIG_PATH")
             .expect("sel4.toml was not found in the current tree, and SEL4_CONFIG was not set");
@@ -56,7 +55,7 @@ fn main() {
     )
     .expect("Can't process config");
 
-    let out_dir = pwd.join("target").join("sel4");
+    let out_dir = config_file_dir.join("target").join("sel4");
 
     let ResolvedSeL4Source {
         kernel_dir,
