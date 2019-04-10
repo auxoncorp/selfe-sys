@@ -115,17 +115,7 @@ pub fn resolve_sel4_source(
         model::SeL4Source::LocalDirectories {
             kernel_dir,
             tools_dir,
-        } => Ok(ResolvedSeL4Source {
-            kernel_dir: fs::canonicalize(&kernel_dir).expect(&format!(
-                "Canonicalization failed for local kernel dir: {}",
-                &kernel_dir.display()
-            )),
-
-            tools_dir: fs::canonicalize(&tools_dir).expect(&format!(
-                "Canonicalization failed for local tools dir: {}",
-                &tools_dir.display()
-            )),
-        }),
+        } => Ok(ResolvedSeL4Source {kernel_dir: kernel_dir.to_owned(), tools_dir: tools_dir.to_owned()}),
         model::SeL4Source::Version(v) => {
             // Confirm we can support the requested version
             let _kernel_sha = version_to_sel4_kernel_release_sha(&v)
@@ -237,6 +227,14 @@ pub fn build_sel4(
     fs::create_dir_all(&build_dir).expect("Failed to create build dir");
     fs::write(build_dir.join("CMakeLists.txt"), cmake_lists_content).unwrap();
 
+    let mut root_task_image_path = PathBuf::from(&config.build.root_task_image);
+    if build_mode == SeL4BuildMode::Kernel {
+        root_task_image_path = fs::canonicalize(&root_task_image_path).expect(&format!(
+            "Failed to canonicalize root task image: {}",
+            root_task_image_path.display()
+        ));
+    }
+
     with_working_dir(&build_dir, || {
         let mut cmake = Command::new("cmake");
         cmake
@@ -246,14 +244,11 @@ pub fn build_sel4(
             .arg(".")
             .env("SEL4_TOOLS_DIR", tools_dir.to_owned());
 
-        let mut root_task_image_path = PathBuf::from(&config.build.root_task_image);
         if build_mode == SeL4BuildMode::Kernel {
-            root_task_image_path = fs::canonicalize(root_task_image_path).expect("Failed to canonicalize root task image");
             cmake.env("ROOT_TASK_PATH", &root_task_image_path);
         }
 
-        cmake.stdout(Stdio::inherit())
-            .stderr(Stdio::inherit());
+        cmake.stdout(Stdio::inherit()).stderr(Stdio::inherit());
         println!("Running cmake: {:?}", &cmake);
 
         let output = cmake.output().expect("failed to run cmake");

@@ -37,6 +37,7 @@ fn main() {
             .expect("sel4.toml was not found in the current tree, and SEL4_CONFIG was not set");
         PathBuf::from(&cfg)
     });
+    let config_file_dir = config_file_path.parent().expect("Can't get parent of config file path");
 
     let config_content = fs::read_to_string(&config_file_path).expect(&format!(
         "Can't read config file: {}",
@@ -48,6 +49,7 @@ fn main() {
         target_arch.to_owned(),
         is_debug,
         Some(sel4_platform.to_owned()),
+        Some(config_file_dir),
     )
     .expect("Can't process config");
 

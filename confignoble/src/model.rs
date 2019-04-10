@@ -2,7 +2,7 @@ use semver_parser::version::{parse as parse_version, Version as SemVersion};
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::Display;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use toml::de::Error as TomlDeError;
 use toml::ser::{to_string_pretty, Error as TomlSerError};
 use toml::value::{Table as TomlTable, Value as TomlValue};
@@ -148,10 +148,10 @@ pub(crate) mod raw {
                     if let Some(profile_table) = v.as_table() {
                         Some(PlatformBuildProfile {
                             make_root_task: parse_required_string(profile_table, "make_root_task")?,
-                            root_task_image: parse_required_string(
+                            root_task_image: PathBuf::from(parse_required_string(
                                 profile_table,
                                 "root_task_image",
-                            )?,
+                            )?),
                         })
                     } else {
                         return Err(ImportError::TypeMismatch {
@@ -168,10 +168,10 @@ pub(crate) mod raw {
                     if let Some(profile_table) = v.as_table() {
                         Some(PlatformBuildProfile {
                             make_root_task: parse_required_string(profile_table, "make_root_task")?,
-                            root_task_image: parse_required_string(
+                            root_task_image: PathBuf::from(parse_required_string(
                                 profile_table,
                                 "root_task_image",
-                            )?,
+                            )?),
                         })
                     } else {
                         return Err(ImportError::TypeMismatch {
@@ -292,7 +292,7 @@ pub mod full {
     #[derive(Debug, Clone, Eq, PartialEq, Default, Hash)]
     pub struct PlatformBuildProfile {
         pub make_root_task: String,
-        pub root_task_image: String,
+        pub root_task_image: PathBuf,
     }
 
     impl SeL4 {
@@ -435,7 +435,7 @@ pub mod full {
                         source.as_ref().map(|v| {
                             let mut prof_table = TomlTable::new();
                             prof_table.insert_str("make_root_task", v.make_root_task.as_ref());
-                            prof_table.insert_str("root_task_image", v.root_task_image.as_ref());
+                            prof_table.insert_str("root_task_image", format!("{}", v.root_task_image.display()));
                             prof_table
                         })
                     }
@@ -534,6 +534,25 @@ pub mod full {
     }
 }
 
+trait RelativePath {
+    // If self is relative, and a base is supplied, evaluate self relative to
+    // the base. Otherwise hand back self.
+    fn relative_to(&self, base: Option<&Path>) -> PathBuf;
+}
+
+impl RelativePath for Path {
+    fn relative_to(&self, base: Option<&Path>) -> PathBuf {
+        if self.is_relative() {
+            match base {
+                Some(p) => p.join(self),
+                None => self.to_path_buf()
+            }
+        } else {
+            self.to_path_buf()
+        }
+    }
+}
+
 pub mod contextualized {
     use super::*;
 
@@ -550,7 +569,7 @@ pub mod contextualized {
         pub cross_compiler_prefix: Option<String>,
         pub toolchain_dir: Option<PathBuf>,
         pub make_root_task: String,
-        pub root_task_image: String,
+        pub root_task_image: PathBuf,
     }
 
     #[derive(Debug, Clone, PartialEq, Hash)]
@@ -558,6 +577,7 @@ pub mod contextualized {
         pub target: String,
         pub platform: String,
         pub is_debug: bool,
+        pub base_dir: Option<PathBuf>,
     }
 
     impl Contextualized {
@@ -566,9 +586,10 @@ pub mod contextualized {
             target: String,
             is_debug: bool,
             platform: Option<String>,
+            base_dir: Option<&Path>
         ) -> Result<Contextualized, ImportError> {
             let f: full::Full = source_toml.parse()?;
-            Self::from_full(f, target, is_debug, platform)
+            Self::from_full(f, target, is_debug, platform, base_dir)
         }
 
         pub fn from_full(
@@ -576,6 +597,7 @@ pub mod contextualized {
             target: String,
             is_debug: bool,
             platform: Option<String>,
+            base_dir: Option<&Path>
         ) -> Result<Contextualized, ImportError> {
             let platform = platform
                 .or(source.sel4.default_platform)
@@ -584,6 +606,7 @@ pub mod contextualized {
                 platform: platform.clone(),
                 target,
                 is_debug,
+                base_dir: base_dir.map(|p| p.to_path_buf()),
             };
 
             let platform_build =
@@ -605,9 +628,9 @@ pub mod contextualized {
             })?;
             let build = Build {
                 cross_compiler_prefix: platform_build.cross_compiler_prefix,
-                toolchain_dir: platform_build.toolchain_dir,
+                toolchain_dir: platform_build.toolchain_dir.map(|p| p.relative_to(base_dir)),
                 make_root_task: build_profile.make_root_task,
-                root_task_image: build_profile.root_task_image,
+                root_task_image: build_profile.root_task_image.relative_to(base_dir),
             };
 
             let source_config = source.sel4.config;
@@ -626,7 +649,13 @@ pub mod contextualized {
             }
 
             Ok(Contextualized {
-                sel4_source: source.sel4.source.clone(),
+                sel4_source: match source.sel4.source {
+                    SeL4Source::Version(v) => SeL4Source::Version(v),
+                    SeL4Source::LocalDirectories {kernel_dir, tools_dir} => SeL4Source::LocalDirectories {
+                        kernel_dir: kernel_dir.relative_to(base_dir),
+                        tools_dir: tools_dir.relative_to(base_dir),
+                    }
+                },
                 context,
                 sel4_config,
                 build,

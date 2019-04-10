@@ -194,24 +194,31 @@ fn main() {
     println!("cargo:rerun-if-file-changed=build.rs");
     println!("cargo:rerun-if-file-changed=src/lib.rs");
 
-    let full_config = sel4_config_path
+    let (full_config, config_dir) = sel4_config_path
         .map(|config_file_path| {
             let config_file_path =
                 fs::canonicalize(&Path::new(&config_file_path)).expect(&format!(
                     "Config file could not be canonicalized: {}",
                     config_file_path.display()
                 ));
+
+            let config_file_dir = config_file_path
+                .parent()
+                .expect("Can't get parent of config file path");
             println!("cargo:rerun-if-file-changed={}", config_file_path.display());
             let config_content = fs::read_to_string(&config_file_path).expect(&format!(
                 "Can't read config file: {}",
                 config_file_path.display()
             ));
-            confignoble::model::full::Full::from_str(&config_content)
-                .expect("Error processing config file")
+            (
+                confignoble::model::full::Full::from_str(&config_content)
+                    .expect("Error processing config file"),
+                Some(config_file_dir.to_owned()),
+            )
         })
         .unwrap_or_else(|| {
             println!("Using default config content in libsel4-sys-gen");
-            confignoble::model::get_default_config()
+            (confignoble::model::get_default_config(), None)
         });
 
     let config = confignoble::model::contextualized::Contextualized::from_full(
@@ -219,6 +226,7 @@ fn main() {
         cargo_cfg_target_arch.to_owned(),
         profile.is_debug(),
         sel4_platform,
+        config_dir.as_ref().map(|pb| pb.as_path()),
     )
     .expect("Error resolving config file");
 
