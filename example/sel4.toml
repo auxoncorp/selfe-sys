@@ -1,7 +1,6 @@
 [sel4]
 default_platform = 'pc99'
-kernel_dir = '/home/mullr/devel/auxon-sel4'
-tools_dir = '/home/mullr/src/sel4/seL4_tools'
+version = "10.1.1"
 
 
 [sel4.config.x86_64]
