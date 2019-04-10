@@ -61,9 +61,26 @@ impl<'a, 'b> AppExt for App<'a, 'b> {
                 .required(true)
                 .help("seL4 platform, like pc99 or imx6 or sabre"),
         )
-        .arg(Arg::with_name("verbose").short("v").takes_value(false).help("verbose"))
-        .arg(Arg::with_name("debug").long("debug").takes_value(false).conflicts_with("release").help("build with debug configuration"))
-        .arg(Arg::with_name("release").long("release").takes_value(false).conflicts_with("debug").help("build with release configuration"))
+        .arg(
+            Arg::with_name("verbose")
+                .short("v")
+                .takes_value(false)
+                .help("verbose"),
+        )
+        .arg(
+            Arg::with_name("debug")
+                .long("debug")
+                .takes_value(false)
+                .conflicts_with("release")
+                .help("build with debug configuration"),
+        )
+        .arg(
+            Arg::with_name("release")
+                .long("release")
+                .takes_value(false)
+                .conflicts_with("debug")
+                .help("build with release configuration"),
+        )
     }
 }
 
