@@ -26,30 +26,24 @@ KernelDebugBuild = true
 KernelPrinting = false
 KernelDebugBuild = false
 
-# A poorly thought out idea for toolchain management: 
 [build.pc99]
-cross_compiler_prefix = ""
+#cross_compiler_prefix = ""
 
 [build.pc99.debug]
-make_root_task = "xargo build --target=x86_64-unknown-linux-gnu"
-root_task_image = "target/x86_64-unknown-linux-gnu/debug/example"
+# make_root_task = "xargo build --target=x86_64-unknown-linux-gnu"
+# root_task_image = "target/x86_64-unknown-linux-gnu/debug/example"
 
 [build.pc99.release]
-make_root_task = "xargo build --target=x86_64-unknown-linux-gnu --release"
-root_task_image = "target/x86_64-unknown-linux-gnu/release/example"
+# make_root_task = "xargo build --target=x86_64-unknown-linux-gnu --release"
+# root_task_image = "target/x86_64-unknown-linux-gnu/release/example"
 
 [build.sabre]
 cross_compiler_prefix = "arm-linux-gnueabihf-"
 
 [build.sabre.debug]
-make_root_task = "xargo build --target=arm-unknown-linux-gnu"
-root_task_image = "target/arm-unknown-linux-gnu/debug/example"
+# make_root_task = "xargo build --target=arm-unknown-linux-gnu"
+# root_task_image = "target/arm-unknown-linux-gnu/debug/example"
 
 [build.sabre.release]
-make_root_task = "xargo build --target=arm-unknown-linux-gnu --release"
-root_task_image = "target/arm-unknown-linux-gnu/release/example"
-
-[build.crazy]
-toolchain_dir = "/opt/my_crazy_toolchain"
-cross_compiler_prefix = "arm-linux-gnueabi-"
-# end of idea
+# make_root_task = "xargo build --target=arm-unknown-linux-gnu --release"
+# root_task_image = "target/arm-unknown-linux-gnu/release/example"

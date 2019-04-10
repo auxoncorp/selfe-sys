@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 use std::{env, fs};
 
 extern crate confignoble;
@@ -63,6 +64,21 @@ fn main() {
     } = resolve_sel4_source(&config.sel4_source, &out_dir.join("source"))
         .expect("resolve sel4 source");
 
+    // Build the root task
+    let mut build_cmd = Command::new("sh");
+    build_cmd
+        .arg("-c")
+        .arg(&config.build.make_root_task)
+        .current_dir(&config_file_dir)
+        .env("SEL4_CONFIG_PATH", config_file_path)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+
+    println!("Running root task build command: {:?}", &build_cmd);
+    let output = build_cmd.output().expect("Failed to execute build command");
+    assert!(output.status.success());
+
+    // Build the kernel and output images
     match build_sel4(
         &out_dir.join("build"),
         &kernel_dir,
