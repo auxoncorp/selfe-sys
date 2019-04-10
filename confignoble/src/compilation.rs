@@ -173,6 +173,21 @@ pub enum SeL4BuildMode {
     Lib,
 }
 
+pub enum SeL4BuildOutcome {
+    StaticLib {
+        build_dir: PathBuf,
+    },
+    Kernel {
+        build_dir: PathBuf,
+        kernel_path: PathBuf,
+    },
+    KernelAndRootImage {
+        build_dir: PathBuf,
+        kernel_path: PathBuf,
+        root_image_path: PathBuf,
+    }
+}
+
 /// Return the cmake build dir
 pub fn build_sel4(
     out_dir: &Path,
@@ -180,7 +195,7 @@ pub fn build_sel4(
     tools_dir: &Path,
     config: &model::contextualized::Contextualized,
     build_mode: SeL4BuildMode,
-) -> PathBuf {
+) -> SeL4BuildOutcome {
     let cmake_lists_content = match build_mode {
         SeL4BuildMode::Kernel => CMAKELISTS_KERNEL,
         SeL4BuildMode::Lib => CMAKELISTS_LIB,
@@ -237,6 +252,7 @@ pub fn build_sel4(
     fs::create_dir_all(&build_dir).expect("Failed to create build dir");
     fs::write(build_dir.join("CMakeLists.txt"), cmake_lists_content).unwrap();
 
+
     with_working_dir(&build_dir, || {
         let mut cmake = Command::new("cmake");
         cmake
@@ -273,5 +289,23 @@ pub fn build_sel4(
         assert!(output.status.success());
     });
 
-    build_dir
+    let sel4_arch = cmake_opts.get("KernelSel4Arch").expect("KernelSel4Arch missing but required as a sel4 config option");
+    let kernel_platform = cmake_opts.get("KernelPlatform").expect("KernelPlatform missing but required as a sel4 config option");
+    match build_mode {
+        SeL4BuildMode::Kernel => match config.context.target.as_ref() {
+            "x86_64" | "x86" => SeL4BuildOutcome::KernelAndRootImage {
+                build_dir: build_dir.clone(),
+                kernel_path: build_dir.join("images").join(format!("kernel-{}-{}", sel4_arch, kernel_platform)),
+                root_image_path: build_dir.join("images").join(format!("root_task-image-{}-{}", sel4_arch, kernel_platform)),
+            },
+            "arm" | "aarch32" | "arm32" | "aarch64" => SeL4BuildOutcome::Kernel {
+                build_dir: build_dir.clone(),
+                kernel_path: build_dir.join("images").join(format!("root_task-image-arm-{}", kernel_platform))
+            },
+            _ => panic!("Unsupported target")
+        },
+        SeL4BuildMode::Lib => SeL4BuildOutcome::StaticLib {
+            build_dir
+        },
+    }
 }

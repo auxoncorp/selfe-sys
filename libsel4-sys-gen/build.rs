@@ -6,7 +6,7 @@ use std::{env, fs};
 
 extern crate confignoble;
 use confignoble::compilation::{
-    build_sel4, resolve_sel4_source, ResolvedSeL4Source, SeL4BuildMode,
+    build_sel4, resolve_sel4_source, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome
 };
 
 const BLACKLIST_TYPES: &'static [&'static str] = &[
@@ -193,6 +193,7 @@ fn main() {
     } = BuildEnv::from_env_vars();
     println!("cargo:rerun-if-file-changed=build.rs");
     println!("cargo:rerun-if-file-changed=src/lib.rs");
+    println!("cargo:rerun-if-env-changed=RUSTFLAGS");
 
     let full_config = sel4_config_path
         .map(|config_file_path| {
@@ -221,6 +222,7 @@ fn main() {
         sel4_platform,
     )
     .expect("Error resolving config file");
+    config.print_boolean_feature_flags();
 
     let sel4_arch = rust_arch_to_sel4_arch(&cargo_cfg_target_arch);
     let arch = rust_arch_to_arch(&cargo_cfg_target_arch);
@@ -231,16 +233,18 @@ fn main() {
     } = resolve_sel4_source(&config.sel4_source, &out_dir.join("sel4_source"))
         .expect("resolve sel4 source");
 
-    let build_dir = build_sel4(
+    let build_dir = if let SeL4BuildOutcome::StaticLib { build_dir }= build_sel4(
         &out_dir,
         &kernel_dir,
         &tools_dir,
         &config,
         SeL4BuildMode::Lib,
-    );
-    config.print_boolean_feature_flags();
+    ) {
+        build_dir
+    } else {
+        panic!("build_sel4 built us something other than a static library");
+    };
 
-    println!("cargo:rerun-if-env-changed=RUSTFLAGS");
     println!("cargo:rustc-link-lib=static=sel4");
     println!(
         "cargo:rustc-link-search=native={}/libsel4",

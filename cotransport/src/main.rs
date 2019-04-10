@@ -3,7 +3,7 @@ use std::{env, fs};
 
 extern crate confignoble;
 use confignoble::compilation::{
-    build_sel4, resolve_sel4_source, ResolvedSeL4Source, SeL4BuildMode,
+    build_sel4, resolve_sel4_source, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome
 };
 
 /// Walk up the directory tree from `start_dir`, looking for "sel4.toml"
@@ -59,11 +59,30 @@ fn main() {
     } = resolve_sel4_source(&config.sel4_source, &out_dir.join("source"))
         .expect("resolve sel4 source");
 
-    build_sel4(
+    match build_sel4(
         &out_dir.join("build"),
         &kernel_dir,
         &tools_dir,
         &config,
         SeL4BuildMode::Kernel,
-    );
+    ) {
+        SeL4BuildOutcome::StaticLib { .. } => panic!("Should not be making a static lib when a kernel is expected"),
+        SeL4BuildOutcome::Kernel {
+            build_dir,
+            kernel_path,
+
+        } => {
+            println!("{}", build_dir.display());
+            println!("{}", kernel_path.display());
+        },
+        SeL4BuildOutcome::KernelAndRootImage {
+            build_dir,
+            kernel_path,
+            root_image_path,
+        } => {
+            println!("{}", build_dir.display());
+            println!("{}", kernel_path.display());
+            println!("{}", root_image_path.display());
+        },
+    }
 }
