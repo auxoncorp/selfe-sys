@@ -1,3 +1,4 @@
+use clap::{App, Arg, SubCommand};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::{env, fs};
@@ -26,11 +27,112 @@ fn find_sel4_toml(start_dir: &Path) -> Option<PathBuf> {
     }
 }
 
-fn main() {
-    let sel4_platform = "pc99";
-    let is_debug = true;
-    let target_arch = "x86_64";
+struct BuildParams {
+    arch: String,
+    platform: String,
+    is_debug: bool,
+    is_verbose: bool,
+}
 
+enum Execution {
+    Build(BuildParams),
+    Simulate(BuildParams),
+}
+
+trait AppExt {
+    fn add_build_params(self) -> Self;
+}
+
+impl<'a, 'b> AppExt for App<'a, 'b> {
+    fn add_build_params(self) -> Self {
+        self.arg(
+            Arg::with_name("arch")
+                .short("a")
+                .long("arch")
+                .value_name("ARCH")
+                .required(true)
+                .help("seL4 architecture target, like x86_64 or arm"),
+        )
+        .arg(
+            Arg::with_name("platform")
+                .short("p")
+                .long("platform")
+                .value_name("PLATFORM")
+                .required(true)
+                .help("seL4 platform, like pc99 or imx6 or sabre"),
+        )
+        .arg(Arg::with_name("verbose").short("v").takes_value(false).help("verbose"))
+        .arg(Arg::with_name("debug").long("debug").takes_value(false).conflicts_with("release").help("build with debug configuration"))
+        .arg(Arg::with_name("release").long("release").takes_value(false).conflicts_with("debug").help("build with release configuration"))
+    }
+}
+
+impl Execution {
+    fn get_or_run_help() -> Self {
+        // TODO - naming / piping / phrasing
+        let mut app = App::new("cotransport")
+            .version("0.1.0")
+            .about("builds and runs seL4 applications")
+            .subcommand(SubCommand::with_name("build").add_build_params())
+            .subcommand(SubCommand::with_name("simulate").add_build_params());
+        let matches = app.clone().get_matches();
+
+        fn parse_build_params(matches: &clap::ArgMatches<'_>) -> BuildParams {
+            let is_verbose = matches.is_present("verbose");
+            let is_debug = !matches.is_present("release");
+            let arch = matches
+                .value_of("arch")
+                .expect("Missing required arch argument")
+                .to_owned();
+            let platform = matches
+                .value_of("platform")
+                .expect("Missing required platform argument")
+                .to_owned();
+            BuildParams {
+                arch,
+                platform,
+                is_debug,
+                is_verbose,
+            }
+        }
+
+        if let Some(matches) = matches.subcommand_matches("build") {
+            Execution::Build(parse_build_params(matches))
+        } else if let Some(matches) = matches.subcommand_matches("simulate") {
+            Execution::Simulate(parse_build_params(matches))
+        } else {
+            let _ = app.print_help();
+            panic!()
+        }
+    }
+}
+
+fn main() {
+    let e = Execution::get_or_run_help();
+    match e {
+        Execution::Build(b) => {
+            let (outcome, _config) = &build_kernel(&b);
+            print_kernel_paths(outcome);
+        }
+        Execution::Simulate(b) => {
+            let (outcome, _config) = build_kernel(&b);
+            if b.is_verbose {
+                print_kernel_paths(&outcome);
+            }
+            panic!("simulate subcommand not yet supported");
+        }
+    }
+}
+
+fn build_kernel(
+    build_params: &BuildParams,
+) -> (
+    SeL4BuildOutcome,
+    confignoble::model::contextualized::Contextualized,
+) {
+    let target_arch = build_params.arch.to_owned();
+    let sel4_platform = build_params.platform.to_owned();
+    let is_debug = build_params.is_debug;
     let pwd = &env::current_dir().unwrap();
     let config_file_path = find_sel4_toml(&pwd).unwrap_or_else(|| {
         let cfg = env::var("SEL4_CONFIG_PATH")
@@ -82,13 +184,22 @@ fn main() {
     assert!(output.status.success());
 
     // Build the kernel and output images
-    match build_sel4(
-        &out_dir.join("build"),
-        &kernel_dir,
-        &tools_dir,
-        &config,
-        SeL4BuildMode::Kernel,
-    ) {
+    (
+        build_sel4(
+            &out_dir.join("build"),
+            &kernel_dir,
+            &tools_dir,
+            &config,
+            SeL4BuildMode::Kernel,
+        ),
+        config,
+    )
+}
+
+/// Print out the kernel-build-variant paths,
+/// panic if the wrong variant
+fn print_kernel_paths(outcome: &SeL4BuildOutcome) {
+    match outcome {
         SeL4BuildOutcome::StaticLib { .. } => {
             panic!("Should not be making a static lib when a kernel is expected")
         }
