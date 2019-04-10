@@ -69,11 +69,15 @@ fn main() {
         .arg("-c")
         .arg(&config.build.make_root_task)
         .current_dir(&config_file_dir)
-        .env("SEL4_CONFIG_PATH", config_file_path)
+        .env("SEL4_CONFIG_PATH", &config_file_path)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit());
 
-    println!("Running root task build command: {:?}", &build_cmd);
+    println!(
+        "Running root task build command:\n    SEL4_CONFIG_PATH={} {}",
+        config_file_path.display(),
+        &config.build.make_root_task
+    );
     let output = build_cmd.output().expect("Failed to execute build command");
     assert!(output.status.success());
 
