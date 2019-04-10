@@ -8,11 +8,14 @@ KernelRetypeFanOutLimit = 256
 [sel4.config.x86_64]
 KernelArch = 'x86'
 KernelX86Sel4Arch = 'x86_64'
+KernelSel4Arch = 'x86_64'
 
 [sel4.config.pc99]
+KernelPlatform = 'pc99'
 
 [sel4.config.sabre]
 KernelARMPlatform = 'sabre'
+KernelPlatform = 'sabre'
 KernelHaveFPU = true
 
 [sel4.config.debug]
