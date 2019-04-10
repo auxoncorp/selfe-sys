@@ -244,10 +244,15 @@ pub fn build_sel4(
             .arg("-G")
             .arg("Ninja")
             .arg(".")
-            .env("SEL4_TOOLS_DIR", tools_dir.to_owned())
-            // TODO wire this up to the config
-            .env("ROOT_TASK_PATH", "/home/mullr/devel/confignoble/example/target/x86_64-unknown-linux-gnu/debug/example")
-            .stdout(Stdio::inherit())
+            .env("SEL4_TOOLS_DIR", tools_dir.to_owned());
+
+        let mut root_task_image_path = PathBuf::from(&config.build.root_task_image);
+        if build_mode == SeL4BuildMode::Kernel {
+            root_task_image_path = fs::canonicalize(root_task_image_path).expect("Failed to canonicalize root task image");
+            cmake.env("ROOT_TASK_PATH", &root_task_image_path);
+        }
+
+        cmake.stdout(Stdio::inherit())
             .stderr(Stdio::inherit());
         println!("Running cmake: {:?}", &cmake);
 

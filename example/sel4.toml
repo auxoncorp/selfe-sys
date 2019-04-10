@@ -50,7 +50,6 @@ root_task_image = "target/armv7-unknown-linux-gnueabihf/release/example"
 
 
 [sel4.config]
-KernelRetypeFanOutLimit = 256
 KernelColourPrinting = true
 KernelUserStackTraceLength = 16
 BuildWithCommonSimulationSettings = true
