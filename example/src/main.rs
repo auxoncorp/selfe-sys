@@ -9,10 +9,11 @@ use sel4_start::{self, DebugOutHandle};
 fn main() {
     let bootinfo = unsafe { &*sel4_start::BOOTINFO };
     writeln!(DebugOutHandle, "Hello fancy world!").unwrap();
+    let num_nodes = bootinfo.numNodes; // Pull out a reference to resolve packed-struct misalignment risk
     writeln!(
         DebugOutHandle,
         "Thing from bootinfo: numNodes={}",
-        bootinfo.numNodes
+        num_nodes
     )
     .unwrap();
 }
