@@ -1,0 +1,9 @@
+* Install the build toolchain
+: cargo install --git ssh://git@github.com/auxoncorp/confignoble.git cotransport --force
+
+* Building the example project
+: cd example
+** x86
+: cotransport build --arch x86_64 --platform pc99
+** ARM
+: cotransport build --arch arm --platform sabre
