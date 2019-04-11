@@ -26,8 +26,8 @@ KernelDebugBuild = true
 KernelPrinting = false
 KernelDebugBuild = false
 
-# [build.pc99]
-# #cross_compiler_prefix = ""
+[build.pc99]
+# cross_compiler_prefix = ""
 
 # [build.pc99.debug]
 # make_root_task = "xargo build --target=x86_64-unknown-linux-gnu"
@@ -37,7 +37,7 @@ KernelDebugBuild = false
 # make_root_task = "xargo build --target=x86_64-unknown-linux-gnu --release"
 # root_task_image = "target/x86_64-unknown-linux-gnu/release/example"
 
-# [build.sabre]
+[build.sabre]
 # cross_compiler_prefix = "arm-linux-gnueabihf-"
 
 # [build.sabre.debug]

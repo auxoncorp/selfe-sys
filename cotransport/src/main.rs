@@ -182,23 +182,31 @@ fn build_kernel(
     } = resolve_sel4_source(&config.sel4_source, &out_dir.join("source"))
         .expect("resolve sel4 source");
 
-    // Build the root task
-    let mut build_cmd = Command::new("sh");
-    build_cmd
-        .arg("-c")
-        .arg(&config.build.make_root_task)
-        .current_dir(&config_file_dir)
-        .env("SEL4_CONFIG_PATH", &config_file_path)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit());
+    let root_task = config.build.root_task.as_ref()
+        .expect(&format!("root task information, particularly a root_task_image path must be supplied in [build.platform.profile], here [build.{}.{}]",
+        config.context.platform, if config.context.is_debug { "debug"} else { "release"})).clone();
 
-    println!(
-        "Running root task build command:\n    SEL4_CONFIG_PATH={} {}",
-        config_file_path.display(),
-        &config.build.make_root_task
-    );
-    let output = build_cmd.output().expect("Failed to execute build command");
-    assert!(output.status.success());
+    if let Some(make_root_task_command) = root_task.make_command {
+        // Build the root task
+        let mut build_cmd = Command::new("sh");
+        build_cmd
+            .arg("-c")
+            .arg(&make_root_task_command)
+            .current_dir(&config_file_dir)
+            .env("SEL4_CONFIG_PATH", &config_file_path)
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
+
+        println!(
+            "Running root task build command:\n    SEL4_CONFIG_PATH={} {}",
+            config_file_path.display(),
+            &make_root_task_command
+        );
+        let output = build_cmd.output().expect("Failed to execute build command");
+        assert!(output.status.success());
+    } else {
+        println!("No make_root_task command supplied, skipping an explicit build for it.")
+    }
 
     // Build the kernel and output images
     (

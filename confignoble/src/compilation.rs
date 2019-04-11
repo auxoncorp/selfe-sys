@@ -243,10 +243,13 @@ pub fn build_sel4(
         .env("SEL4_TOOLS_DIR", tools_dir.to_owned());
 
     if build_mode == SeL4BuildMode::Kernel {
-        cmake.env(
-            "ROOT_TASK_PATH",
-            PathBuf::from(&config.build.root_task_image),
-        );
+        let rti = &config
+            .build
+            .root_task
+            .as_ref()
+            .expect("A build profile's  `root_task_image` is required for a kernel build")
+            .image_path;
+        cmake.env("ROOT_TASK_PATH", PathBuf::from(rti));
     }
 
     cmake.stdout(Stdio::inherit()).stderr(Stdio::inherit());

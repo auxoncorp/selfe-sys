@@ -144,45 +144,36 @@ pub(crate) mod raw {
                 let toolchain_dir =
                     parse_optional_string(table, "toolchain_dir")?.map(PathBuf::from);
 
-                let debug_build_profile = if let Some(v) = table.get("debug") {
-                    if let Some(profile_table) = v.as_table() {
-                        Some(PlatformBuildProfile {
-                            make_root_task: parse_required_string(profile_table, "make_root_task")?,
-                            root_task_image: PathBuf::from(parse_required_string(
-                                profile_table,
-                                "root_task_image",
-                            )?),
-                        })
+                fn parse_build_profile(
+                    parent_table: &TomlTable,
+                    profile_name: &'static str,
+                ) -> Result<Option<PlatformBuildProfile>, ImportError> {
+                    if let Some(v) = parent_table.get(profile_name) {
+                        if let Some(profile_table) = v.as_table() {
+                            Ok(Some(PlatformBuildProfile {
+                                make_root_task: parse_optional_string(
+                                    profile_table,
+                                    "make_root_task",
+                                )?,
+                                root_task_image: PathBuf::from(parse_required_string(
+                                    profile_table,
+                                    "root_task_image",
+                                )?),
+                            }))
+                        } else {
+                            return Err(ImportError::TypeMismatch {
+                                name: profile_name.to_string(),
+                                expected: "table",
+                                found: v.type_str(),
+                            });
+                        }
                     } else {
-                        return Err(ImportError::TypeMismatch {
-                            name: "debug".to_string(),
-                            expected: "table",
-                            found: v.type_str(),
-                        });
+                        Ok(None)
                     }
-                } else {
-                    None
-                };
+                }
+                let debug_build_profile = parse_build_profile(table, "debug")?;
+                let release_build_profile = parse_build_profile(table, "release")?;
 
-                let release_build_profile = if let Some(v) = table.get("release") {
-                    if let Some(profile_table) = v.as_table() {
-                        Some(PlatformBuildProfile {
-                            make_root_task: parse_required_string(profile_table, "make_root_task")?,
-                            root_task_image: PathBuf::from(parse_required_string(
-                                profile_table,
-                                "root_task_image",
-                            )?),
-                        })
-                    } else {
-                        return Err(ImportError::TypeMismatch {
-                            name: "release".to_string(),
-                            expected: "table",
-                            found: v.type_str(),
-                        });
-                    }
-                } else {
-                    None
-                };
                 Ok(PlatformBuild {
                     cross_compiler_prefix,
                     toolchain_dir,
@@ -291,7 +282,7 @@ pub mod full {
 
     #[derive(Debug, Clone, Eq, PartialEq, Default, Hash)]
     pub struct PlatformBuildProfile {
-        pub make_root_task: String,
+        pub make_root_task: Option<String>,
         pub root_task_image: PathBuf,
     }
 
@@ -434,7 +425,9 @@ pub mod full {
                     ) -> Option<TomlTable> {
                         source.as_ref().map(|v| {
                             let mut prof_table = TomlTable::new();
-                            prof_table.insert_str("make_root_task", v.make_root_task.as_ref());
+                            if let Some(mrt) = v.make_root_task.as_ref() {
+                                prof_table.insert_str("make_root_task", mrt.as_ref());
+                            }
                             prof_table.insert_str(
                                 "root_task_image",
                                 format!("{}", v.root_task_image.display()),
@@ -571,8 +564,13 @@ pub mod contextualized {
     pub struct Build {
         pub cross_compiler_prefix: Option<String>,
         pub toolchain_dir: Option<PathBuf>,
-        pub make_root_task: String,
-        pub root_task_image: PathBuf,
+        pub root_task: Option<RootTask>,
+    }
+
+    #[derive(Debug, Clone, Eq, PartialEq, Default, Hash)]
+    pub struct RootTask {
+        pub make_command: Option<String>,
+        pub image_path: PathBuf,
     }
 
     #[derive(Debug, Clone, PartialEq, Hash)]
@@ -625,17 +623,16 @@ pub mod contextualized {
             } else {
                 platform_build.release_build_profile
             };
-            let build_profile = build_profile.ok_or_else(|| ImportError::NoBuildSupplied {
-                platform: platform.clone(),
-                profile: if is_debug { "debug" } else { "release " },
-            })?;
+            let root_task = build_profile.map(|bp| RootTask {
+                make_command: bp.make_root_task,
+                image_path: bp.root_task_image.relative_to(base_dir),
+            });
             let build = Build {
                 cross_compiler_prefix: platform_build.cross_compiler_prefix,
                 toolchain_dir: platform_build
                     .toolchain_dir
                     .map(|p| p.relative_to(base_dir)),
-                make_root_task: build_profile.make_root_task,
-                root_task_image: build_profile.root_task_image.relative_to(base_dir),
+                root_task,
             };
 
             let source_config = source.sel4.config;
@@ -760,7 +757,7 @@ mod tests {
     fn platform_required_for_contextualization() {
         let f = full::Full::empty();
         assert_eq!(&None, &f.sel4.default_platform);
-        match contextualized::Contextualized::from_full(f, "target".to_owned(), true, None) {
+        match contextualized::Contextualized::from_full(f, "target".to_owned(), true, None, None) {
             Ok(_) => panic!("Expected an Err about missing platform"),
             Err(e) => match e {
                 ImportError::NoPlatformSupplied => (), // All according to plan
@@ -780,19 +777,31 @@ mod tests {
                 cross_compiler_prefix: None,
                 toolchain_dir: None,
                 debug_build_profile: Some(full::PlatformBuildProfile {
-                    make_root_task: "cmake".to_string(),
-                    root_task_image: "over_here".to_string(),
+                    make_root_task: Some("cmake".to_string()),
+                    root_task_image: PathBuf::from("over_here"),
                 }),
                 release_build_profile: None,
             },
         );
-        let c =
-            contextualized::Contextualized::from_full(f, "target".to_owned(), true, None).unwrap();
+        let c = contextualized::Contextualized::from_full(f, "target".to_owned(), true, None, None)
+            .unwrap();
         assert_eq!(expected, c.context.platform);
         assert_eq!(true, c.context.is_debug);
         assert_eq!("target".to_owned(), c.context.target);
-        assert_eq!("cmake", c.build.make_root_task);
-        assert_eq!("over_here", c.build.root_task_image);
+        assert_eq!(
+            "cmake",
+            c.build
+                .root_task
+                .as_ref()
+                .unwrap()
+                .make_command
+                .as_ref()
+                .unwrap()
+        );
+        assert_eq!(
+            PathBuf::from("over_here"),
+            c.build.root_task.as_ref().unwrap().image_path
+        );
     }
 
     #[test]
@@ -808,8 +817,8 @@ mod tests {
                 toolchain_dir: None,
                 debug_build_profile: None,
                 release_build_profile: Some(full::PlatformBuildProfile {
-                    make_root_task: "cmake".to_string(),
-                    root_task_image: "over_here".to_string(),
+                    make_root_task: Some("cmake".to_string()),
+                    root_task_image: PathBuf::from("over_here"),
                 }),
             },
         );
@@ -818,12 +827,25 @@ mod tests {
             "target".to_owned(),
             false,
             Some(expected.clone()),
+            None,
         )
         .unwrap();
         assert_eq!(expected, c.context.platform);
         assert_eq!(false, c.context.is_debug);
         assert_eq!("target".to_owned(), c.context.target);
-        assert_eq!("cmake", c.build.make_root_task);
-        assert_eq!("over_here", c.build.root_task_image);
+        assert_eq!(
+            "cmake",
+            c.build
+                .root_task
+                .as_ref()
+                .unwrap()
+                .make_command
+                .as_ref()
+                .unwrap()
+        );
+        assert_eq!(
+            PathBuf::from("over_here"),
+            c.build.root_task.unwrap().image_path
+        );
     }
 }

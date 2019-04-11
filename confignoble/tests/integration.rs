@@ -109,13 +109,14 @@ fn full_parse_happy_path() {
     );
 
     let resolved_some_arbitrary_platform_default =
-        contextualized::Contextualized::from_full(f.clone(), "arm32".to_owned(), true, None)
+        contextualized::Contextualized::from_full(f.clone(), "arm32".to_owned(), true, None, None)
             .unwrap();
     let resolved_sabre = contextualized::Contextualized::from_full(
         f.clone(),
         "arm32".to_owned(),
         true,
         Some("sabre".to_owned()),
+        None,
     )
     .unwrap();
     assert_ne!(resolved_some_arbitrary_platform_default, resolved_sabre);
@@ -135,6 +136,7 @@ fn happy_path_straight_to_contextualized() {
         "arm32".to_owned(),
         true,
         Some("sabre".to_owned()),
+        None,
     )
     .unwrap();
     assert_eq!(
