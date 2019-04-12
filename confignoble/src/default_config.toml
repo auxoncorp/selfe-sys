@@ -1,6 +1,6 @@
 [sel4]
 default_platform = 'pc99'
-version = '10.0.0'
+version = '10.1.1'
 
 [sel4.config]
 KernelRetypeFanOutLimit = 256
@@ -9,13 +9,20 @@ KernelRetypeFanOutLimit = 256
 KernelArch = 'x86'
 KernelX86Sel4Arch = 'x86_64'
 KernelSel4Arch = 'x86_64'
+# KernelIOMMU = true
+
+[sel4.config.arm]
+KernelArch = 'arm'
+KernelArmSel4Arch = 'aarch32'
+KernelSel4Arch = 'aarch32'
+# KernelArmSMMU = true
+# KernelArmHypervisorSupport = true
 
 [sel4.config.pc99]
-KernelPlatform = 'pc99'
+KernelX86Platform = 'pc99'
 
 [sel4.config.sabre]
-KernelARMPlatform = 'sabre'
-KernelPlatform = 'sabre'
+KernelArmPlatform = 'sabre'
 KernelHaveFPU = true
 
 [sel4.config.debug]
@@ -38,7 +45,7 @@ KernelDebugBuild = false
 # root_task_image = "target/x86_64-unknown-linux-gnu/release/example"
 
 [build.sabre]
-# cross_compiler_prefix = "arm-linux-gnueabihf-"
+cross_compiler_prefix = "arm-linux-gnueabihf-"
 
 # [build.sabre.debug]
 # make_root_task = "xargo build --target=arm-unknown-linux-gnu"

@@ -6,11 +6,26 @@ version = "10.1.1"
 [sel4.config.x86_64]
 KernelArch = 'x86'
 KernelX86Sel4Arch = 'x86_64'
+KernelSel4Arch = 'x86_64'
+Kernel64 = true
 
 [sel4.config.pc99]
+KernelX86Platform = 'pc99'
+KernelX86MicroArch = 'nehalem'
+LibPlatSupportX86ConsoleDevice = 'com1'
+KernelVTX = false
+KernelX86DangerousMSR = false
+KernelX86IBPBOnContextSwitch = false
+KernelX86IBRSMode = 'ibrs_none'
+KernelX86RSBOnContextSwitch = false
+
+[sel4.config.arm]
+KernelArch = 'arm'
+KernelArmSel4Arch = 'aarch32'
+KernelSel4Arch = 'aarch32'
 
 [sel4.config.sabre]
-KernelARMPlatform = 'sabre'
+KernelArmPlatform = 'sabre'
 KernelHaveFPU = true
 
 [sel4.config.debug]
@@ -66,13 +81,6 @@ KernelNumPriorities = 256
 KernelStackBits = 12
 KernelTimeSlice = 5
 KernelTimerTickMS = 2
-KernelSel4Arch = 'x86_64'
-KernelPlatform = 'pc99'
-KernelArch = 'x86'
-KernelX86Sel4Arch = 'x86_64'
-Kernel64 = true
-KernelX86MicroArch = 'nehalem'
-LibPlatSupportX86ConsoleDevice = 'com1'
 KernelMaxNumNodes = 1
 KernelRetypeFanOutLimit = 16384
 KernelRootCNodeSizeBits = 19
@@ -96,11 +104,6 @@ KernelMultiboot2Header = true
 KernelMultibootGFXMode = 'none'
 KernelSkimWindow = true
 KernelSyscall = 'syscall'
-KernelVTX = false
-KernelX86DangerousMSR = false
-KernelX86IBPBOnContextSwitch = false
-KernelX86IBRSMode = 'ibrs_none'
-KernelX86RSBOnContextSwitch = false
 KernelXSaveSize = 576
 LinkPageSize = 4096
 UserLinkerGCSections = false

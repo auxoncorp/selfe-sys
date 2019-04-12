@@ -4,6 +4,9 @@ use std::process::{Command, Stdio};
 use std::{env, fs};
 
 extern crate confignoble;
+
+mod simulate;
+
 use confignoble::compilation::{
     build_sel4, resolve_sel4_source, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome,
 };
@@ -27,7 +30,7 @@ fn find_sel4_toml(start_dir: &Path) -> Option<PathBuf> {
     }
 }
 
-struct BuildParams {
+pub struct BuildParams {
     arch: String,
     platform: String,
     is_debug: bool,
@@ -64,6 +67,7 @@ impl<'a, 'b> AppExt for App<'a, 'b> {
         .arg(
             Arg::with_name("verbose")
                 .short("v")
+                .long("verbose")
                 .takes_value(false)
                 .help("verbose"),
         )
@@ -125,6 +129,7 @@ impl Execution {
 }
 
 fn main() {
+    // TODO - Exit code management
     let e = Execution::get_or_run_help();
     match e {
         Execution::Build(b) => {
@@ -132,10 +137,17 @@ fn main() {
             print_kernel_paths(outcome);
         }
         Execution::Simulate(b) => {
-            let (outcome, _config) = build_kernel(&b);
-            if b.is_verbose {
-                print_kernel_paths(&outcome);
+            let (outcome, config) = build_kernel(&b);
+            if let SeL4BuildOutcome::Kernel{
+                kernel_path,
+                root_image_path,
+                ..
+            }  = outcome {
+                simulate::run_simulate(&b, &kernel_path, &root_image_path, &config).expect("Simulation failed");
+            } else {
+                panic!("Should not have built a static lib when a kernel is expected")
             }
+
             panic!("simulate subcommand not yet supported");
         }
     }
@@ -194,12 +206,14 @@ fn build_kernel(
             .arg(&make_root_task_command)
             .current_dir(&config_file_dir)
             .env("SEL4_CONFIG_PATH", &config_file_path)
+            .env("SEL4_PLATFORM", &config.context.platform)
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit());
 
         println!(
-            "Running root task build command:\n    SEL4_CONFIG_PATH={} {}",
+            "Running root task build command:\n    SEL4_CONFIG_PATH={} SEL4_PLATFORM={} {}",
             config_file_path.display(),
+            &config.context.platform,
             &make_root_task_command
         );
         let output = build_cmd.output().expect("Failed to execute build command");
@@ -231,18 +245,13 @@ fn print_kernel_paths(outcome: &SeL4BuildOutcome) {
         SeL4BuildOutcome::Kernel {
             build_dir,
             kernel_path,
-        } => {
-            println!("{}", build_dir.display());
-            println!("{}", kernel_path.display());
-        }
-        SeL4BuildOutcome::KernelAndRootImage {
-            build_dir,
-            kernel_path,
             root_image_path,
         } => {
             println!("{}", build_dir.display());
             println!("{}", kernel_path.display());
-            println!("{}", root_image_path.display());
+            if let Some(rip) = root_image_path {
+                println!("{}", rip.display());
+            }
         }
     }
 }
