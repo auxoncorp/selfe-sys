@@ -744,8 +744,8 @@ mod tests {
         assert_eq!(
             SeL4Source::Version(SemVersion {
                 major: 10,
-                minor: 0,
-                patch: 0,
+                minor: 1,
+                patch: 1,
                 pre: vec![],
                 build: vec![],
             }),
