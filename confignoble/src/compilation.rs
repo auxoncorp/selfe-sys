@@ -160,11 +160,7 @@ pub enum SeL4BuildOutcome {
     Kernel {
         build_dir: PathBuf,
         kernel_path: PathBuf,
-    },
-    KernelAndRootImage {
-        build_dir: PathBuf,
-        kernel_path: PathBuf,
-        root_image_path: PathBuf,
+        root_image_path: Option<PathBuf>,
     },
 }
 
@@ -280,25 +276,30 @@ pub fn build_sel4(
     if let Some(_) = cmake_opts.get("KernelPlatform") {
         panic!("Explicitly supplying a KernelPlatform property interferes with the inner workings of the seL4 cmake build")
     }
-    let kernel_platform = cmake_opts.get("KernelX86Platform")
-                .unwrap_or_else(|| cmake_opts.get("KernelArmPlatform")
-                .expect("KernelArmPlatform or KernelX86Platform missing but required as a sel4 config option"));
+    let kernel_platform = cmake_opts.get("KernelX86Platform").unwrap_or_else(|| {
+        cmake_opts.get("KernelArmPlatform").expect(
+            "KernelArmPlatform or KernelX86Platform missing but required as a sel4 config option",
+        )
+    });
     match build_mode {
         SeL4BuildMode::Kernel => match config.context.target.as_ref() {
-            "x86_64" | "x86" => SeL4BuildOutcome::KernelAndRootImage {
+            "x86_64" | "x86" => SeL4BuildOutcome::Kernel {
                 build_dir: build_dir.clone(),
                 kernel_path: build_dir
                     .join("images")
                     .join(format!("kernel-{}-{}", sel4_arch, kernel_platform)),
-                root_image_path: build_dir
-                    .join("images")
-                    .join(format!("root_task-image-{}-{}", sel4_arch, kernel_platform)),
+                root_image_path: Some(
+                    build_dir
+                        .join("images")
+                        .join(format!("root_task-image-{}-{}", sel4_arch, kernel_platform)),
+                ),
             },
             "arm" | "aarch32" | "arm32" | "aarch64" => SeL4BuildOutcome::Kernel {
                 build_dir: build_dir.clone(),
                 kernel_path: build_dir
                     .join("images")
                     .join(format!("root_task-image-arm-{}", kernel_platform)),
+                root_image_path: None,
             },
             _ => panic!("Unsupported target"),
         },
