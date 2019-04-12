@@ -33,3 +33,7 @@ _stack_bottom:
 _stack_top:
 "###
 );
+
+// This is required to be present at link time, but unused.
+#[no_mangle]
+pub extern fn __aeabi_unwind_cpp_pr0() {}
