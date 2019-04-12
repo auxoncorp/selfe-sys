@@ -1,12 +1,23 @@
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+extern crate toml;
+
 extern crate bindgen;
 use bindgen::Builder;
-use std::path::{Path, PathBuf};
 
 extern crate confignoble;
 use confignoble::build_helpers::*;
 use confignoble::compilation::{
     build_sel4, resolve_sel4_source, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome,
 };
+
+extern crate proc_macro2;
+use proc_macro2::{Ident, Span, TokenStream};
+
+extern crate quote;
+use quote::quote;
 
 const BLACKLIST_TYPES: &'static [&'static str] = &[
     "seL4_CPtr",
@@ -41,6 +52,13 @@ fn expand_include_dir(d: &str, arch: &str, sel4_arch: &str, ptr_width: usize) ->
     d.replace("$ARCH$", arch)
         .replace("$SEL4_ARCH$", sel4_arch)
         .replace("$PTR_WIDTH$", &format!("{}", ptr_width))
+}
+
+fn rustfmt(p: &Path) {
+    Command::new("rustfmt")
+        .arg(p)
+        .output()
+        .expect("Failed to rustfmt generated code");
 }
 
 fn gen_bindings(
@@ -116,6 +134,242 @@ fn rust_arch_to_arch(arch: &str) -> String {
     }
 }
 
+#[derive(Debug)]
+struct BitfieldType {
+    name: String,
+    is_fault: bool,
+    fields: Vec<String>,
+}
+
+fn load_bitfields_toml() -> Vec<BitfieldType> {
+    println!("cargo:rerun-if-file-changed=codegen/bitfields.toml");
+    let bitfields_toml_str = include_str!("codegen/bitfields.toml");
+    let bitfields_toml: toml::value::Value =
+        toml::from_str(bitfields_toml_str).expect("Parsing bitfields.toml");
+
+    let top_toml = bitfields_toml
+        .as_table()
+        .expect("Top level of bitfields.toml should be a table");
+    let bitfield_types_toml = top_toml
+        .get("bitfield_types")
+        .and_then(|v| v.as_array())
+        .expect("bitfields.toml should have bitfield_types array at the top level");
+
+    let mut types = vec![];
+    for raw_type_toml in bitfield_types_toml {
+        let type_toml = raw_type_toml
+            .as_table()
+            .expect("Each bitfield type should be a table");
+        let bitfield_type = BitfieldType {
+            name: type_toml
+                .get("name")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_owned())
+                .expect("name"),
+            is_fault: type_toml
+                .get("is_fault")
+                .and_then(|v| v.as_bool())
+                .expect("is_fault"),
+            fields: type_toml
+                .get("fields")
+                .and_then(|v| v.as_array())
+                .expect("fields")
+                .iter()
+                .map(|f| f.as_str().expect("field").to_owned())
+                .collect(),
+        };
+
+        types.push(bitfield_type);
+    }
+
+    types
+}
+
+// Aux bitfield types for use with the quote macro
+#[derive(Clone)]
+struct FieldAccess {
+    name: Ident,
+    getter: Ident,
+    setter: Ident,
+}
+
+fn gen_bitfield_test(bf: &BitfieldType) -> TokenStream {
+    let name = bf.name.clone();
+    let is_fault = bf.is_fault;
+    // let fields = bf.fields.iter().map(|field_name| FieldView {
+    //     name: field_name.clone(),
+    //     type_name: bf.name.clone(),
+    // });
+
+    let field_names = bf
+        .fields
+        .iter()
+        .map(|f| Ident::new(f, Span::call_site()))
+        .collect::<Vec<_>>();
+
+    let param_struct_name = Ident::new(&format!("{}Params", name), Span::call_site());
+    let param_struct_fields = field_names.clone();
+    let param_struct_code = quote! {
+        #[derive(Debug, Clone)]
+        struct #param_struct_name {
+            #(#param_struct_fields: u64),*
+        }
+    };
+
+    let constructor = Ident::new(
+        &format!("seL4_{}{}_new", if is_fault { "Fault_" } else { "" }, name),
+        Span::call_site(),
+    );
+    let constructor_params = field_names.clone();
+    let constructor_return_type = if is_fault {
+        quote!{ seL4_Fault }
+    } else {
+        unimplemented!()
+    };
+    let constructor_code = quote! {
+        impl #param_struct_name {
+            fn create(&self) -> #constructor_return_type {
+                unsafe {
+                    #constructor(
+                        #(self.#constructor_params),*
+                    )
+                }
+            }
+        }
+    };
+
+    let gen_params_fn = Ident::new(&format!("gen_{}_params", name), Span::call_site());
+    let field_count = field_names.len();
+    let gen_params_fn_init_code = field_names
+        .iter()
+        .zip(0..field_count)
+        .map(|(field, index)| {
+            quote! {
+                #field: a[#index]
+            }
+        });
+    let gen_params_fn_code = if field_count > 0 {
+        quote! {
+            fn #gen_params_fn() -> impl Strategy<Value = #param_struct_name> {
+                any::<[u64;#field_count]>()
+                    .prop_map(|a| #param_struct_name {
+                        #(#gen_params_fn_init_code),*
+                    })
+            }
+        }
+    } else {
+        quote! {
+            fn #gen_params_fn() -> impl Strategy<Value = #param_struct_name> {
+                Just(#param_struct_name {})
+            }
+        }
+    };
+    let gen_fn = Ident::new(&format!("gen_{}", name), Span::call_site());
+    let gen_fn_value_type = if is_fault {
+        Ident::new("seL4_Fault", Span::call_site())
+    } else {
+        unimplemented!()
+    };
+    let gen_fn_code = quote! {
+        fn #gen_fn() -> impl Strategy<Value = #gen_fn_value_type> {
+            #gen_params_fn().prop_map(|params| params.create())
+        }
+    };
+
+    let field_access = field_names
+        .iter()
+        .map(|field| FieldAccess {
+            name: field.clone(),
+            getter: Ident::new(
+                &format!(
+                    "seL4_{}{}_ptr_get_{}",
+                    if is_fault { "Fault_" } else { "" },
+                    name,
+                    field
+                ),
+                Span::call_site(),
+            ),
+            setter: Ident::new(
+                &format!(
+                    "seL4_{}{}_ptr_set_{}",
+                    if is_fault { "Fault_" } else { "" },
+                    name,
+                    field
+                ),
+                Span::call_site(),
+            ),
+        })
+        .collect::<Vec<_>>();
+
+    let test_constructor_assertions = field_access.iter().map(|f| {
+        let field_name = f.name.clone();
+        let field_getter = f.getter.clone();
+
+        quote! {
+            assert!(#field_getter(&mut val) == params.#field_name);
+        }
+    });
+    let test_constructor_code = quote! {
+        proptest! {
+            #[test]
+            #[allow(unused_variables, unused_mut, unused_unsafe)]
+            fn constructor_fields(params in #gen_params_fn()) {
+                unsafe {
+                    let mut val = params.create();
+                    #(#test_constructor_assertions)*
+                }
+            }
+        }
+    };
+
+    let test_get_set_code = field_access.iter().map(|f| {
+        let test_name = Ident::new(&format!("field_{}", f.name), Span::call_site());
+        let getter = &f.getter;
+        let setter = &f.setter;
+
+        quote! {
+            proptest! {
+                #[test]
+                fn #test_name(mut record in #gen_fn(), val in any::<u64>()) {
+                    unsafe {
+                        #setter(&mut record, val);
+                        assert!(#getter(&mut record) == val);
+                    }
+                }
+            }
+        }
+    });
+
+    let mod_name = Ident::new(&format!("{}Test", name), Span::call_site());
+    quote::quote! {
+        #[cfg(test)]
+        mod #mod_name {
+            use super::*;
+            use proptest::prelude::*;
+
+            #param_struct_code
+            #constructor_code
+            #gen_params_fn_code
+            #gen_fn_code
+
+            #test_constructor_code
+            #(#test_get_set_code)*
+        }
+    }
+}
+
+fn gen_tests(out_dir: &Path) {
+    let bitfield_types = load_bitfields_toml();
+    let test_mods_code = bitfield_types.iter().map(gen_bitfield_test);
+    let top_level_code = quote! {
+        #(#test_mods_code)*
+    };
+
+    let out_file = out_dir.join("generated_tests.rs");
+    fs::write(&out_file, top_level_code.to_string()).expect("Write generated_tests.rs");
+    rustfmt(&out_file);
+}
+
 fn main() {
     BuildEnv::request_reruns();
     let BuildEnv {
@@ -127,6 +381,8 @@ fn main() {
     println!("cargo:rerun-if-file-changed=build.rs");
     println!("cargo:rerun-if-file-changed=src/lib.rs");
     println!("cargo:rerun-if-env-changed=RUSTFLAGS");
+
+    gen_tests(&out_dir);
 
     let config = load_config_from_env_or_default();
     config.print_boolean_feature_flags();

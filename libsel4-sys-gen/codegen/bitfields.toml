@@ -1,0 +1,25 @@
+[[bitfield_types]]
+name = "NullFault"
+is_fault = true
+fields = []
+
+[[bitfield_types]]
+name = "CapFault"
+is_fault = true
+fields = ["IP", "Addr", "InRecvPhase", "LookupFailureType", "MR4", "MR5", "MR6"]
+
+[[bitfield_types]]
+name = "UnknownSyscall"
+is_fault = true
+fields = ["RAX", "RBX", "RCX", "RDX", "RSI", "RDI", "RBP", "R8", "R9", "R10", "R11",
+          "R12", "R13", "R14", "R15", "FaultIP", "RSP", "FLAGS", "Syscall"]
+
+[[bitfield_types]]
+name = "UserException"
+is_fault = true
+fields = ["FaultIP", "Stack", "FLAGS", "Number", "Code"]
+
+[[bitfield_types]]
+name = "VMFault"
+is_fault = true
+fields = ["IP", "Addr", "PrefetchFault", "FSR"]
