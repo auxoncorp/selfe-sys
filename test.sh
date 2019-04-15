@@ -18,8 +18,8 @@ set -e
 
 (
     cd example
-    SEL4_PLATFORM=sabre xargo build --target armv7-unknown-linux-gnueabihf
-    SEL4_PLATFORM=pc99 xargo build --target=x86_64-unknown-linux-gnu
+    SEL4_PLATFORM=sabre cargo xbuild --target armv7-unknown-linux-gnueabihf
+    SEL4_PLATFORM=pc99 cargo xbuild --target=x86_64-unknown-linux-gnu
 
     ../cotransport/target/debug/cotransport build --arch x86_64 --platform pc99 --debug
     ../cotransport/target/debug/cotransport build --arch x86_64 --platform pc99 --release

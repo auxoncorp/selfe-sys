@@ -42,11 +42,11 @@ KernelOptimisation = '-O2'
 cross_compiler_prefix = ""
 
 [build.pc99.debug]
-make_root_task = "xargo build --target=x86_64-unknown-linux-gnu"
+make_root_task = "cargo xbuild --target=x86_64-unknown-linux-gnu"
 root_task_image = "target/x86_64-unknown-linux-gnu/debug/example"
 
 [build.pc99.release]
-make_root_task = "xargo build --target=x86_64-unknown-linux-gnu --release"
+make_root_task = "cargo xbuild --target=x86_64-unknown-linux-gnu --release"
 root_task_image = "target/x86_64-unknown-linux-gnu/release/example"
 
 
@@ -55,11 +55,11 @@ root_task_image = "target/x86_64-unknown-linux-gnu/release/example"
 cross_compiler_prefix = "arm-linux-gnueabihf-"
 
 [build.sabre.debug]
-make_root_task = "xargo build --target=armv7-unknown-linux-gnueabihf"
+make_root_task = "cargo xbuild --target=armv7-unknown-linux-gnueabihf"
 root_task_image = "target/armv7-unknown-linux-gnueabihf/debug/example"
 
 [build.sabre.release]
-make_root_task = "xargo build --target=armv7-unknown-linux-gnueabihf --release"
+make_root_task = "cargo xbuild --target=armv7-unknown-linux-gnueabihf --release"
 root_task_image = "target/armv7-unknown-linux-gnueabihf/release/example"
 
 
