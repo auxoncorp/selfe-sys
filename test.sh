@@ -23,6 +23,6 @@ set -e
 
     ../cotransport/target/debug/cotransport build --arch x86_64 --platform pc99 --debug
     ../cotransport/target/debug/cotransport build --arch x86_64 --platform pc99 --release
-    # ../cotransport/target/debug/cotransport build --arch aarch32 --platform sabre
+    ../cotransport/target/debug/cotransport build --arch arm --platform sabre
 )
 

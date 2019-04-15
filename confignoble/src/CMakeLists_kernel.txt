@@ -7,4 +7,10 @@ include($ENV{SEL4_TOOLS_DIR}/cmake-tool/common.cmake)
 include($ENV{SEL4_TOOLS_DIR}/cmake-tool/base.cmake)
 include($ENV{SEL4_TOOLS_DIR}/cmake-tool/configuration.cmake)
 
+
 DeclareRootserver(root_task)
+
+# TODO - Consider only executing the following in the elfloader-specific (read: arm) path
+set_property(TARGET rootserver_image PROPERTY ROOTSERVER_IMAGE "$ENV{ROOT_TASK_PATH}")
+# Needed to pull in elfloader specific utility libraries
+add_subdirectory("$ENV{UTIL_LIBS_SOURCE_PATH}" "$ENV{UTIL_LIBS_BIN_PATH}")

@@ -191,6 +191,7 @@ fn build_kernel(
     let ResolvedSeL4Source {
         kernel_dir,
         tools_dir,
+        util_libs_dir,
     } = resolve_sel4_source(&config.sel4_source, &out_dir.join("source"))
         .expect("resolve sel4 source");
 
@@ -228,6 +229,7 @@ fn build_kernel(
             &out_dir.join("build"),
             &kernel_dir,
             &tools_dir,
+            &util_libs_dir,
             &config,
             SeL4BuildMode::Kernel,
         ),

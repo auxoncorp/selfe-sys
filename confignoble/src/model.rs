@@ -23,6 +23,7 @@ pub enum SeL4Source {
     LocalDirectories {
         kernel_dir: PathBuf,
         tools_dir: PathBuf,
+        util_libs_dir: PathBuf,
     },
 }
 
@@ -38,6 +39,7 @@ pub(crate) mod raw {
     pub(crate) struct SeL4 {
         pub(crate) kernel_dir: Option<PathBuf>,
         pub(crate) tools_dir: Option<PathBuf>,
+        pub(crate) util_libs_dir: Option<PathBuf>,
         pub(crate) version: Option<String>,
         pub(crate) default_platform: Option<String>,
         pub(crate) config: BTreeMap<String, TomlValue>,
@@ -57,6 +59,7 @@ pub(crate) mod raw {
             fn parse_sel4(table: &TomlTable) -> Result<SeL4, ImportError> {
                 let kernel_dir = parse_optional_string(table, "kernel_dir")?.map(PathBuf::from);
                 let tools_dir = parse_optional_string(table, "tools_dir")?.map(PathBuf::from);
+                let util_libs_dir = parse_optional_string(table, "util_libs_dir")?.map(PathBuf::from);
                 let version = parse_optional_string(table, "version")?;
                 let default_platform = parse_optional_string(table, "default_platform")?;
                 let raw_config = table
@@ -81,6 +84,7 @@ pub(crate) mod raw {
                 Ok(SeL4 {
                     kernel_dir,
                     tools_dir,
+                    util_libs_dir,
                     version,
                     default_platform,
                     config,
@@ -310,15 +314,16 @@ pub mod full {
         fn from_str(s: &str) -> Result<Self, Self::Err> {
             let raw::Raw { sel4, build } = s.parse()?;
 
-            let source = match (sel4.kernel_dir, sel4.tools_dir, sel4.version) {
-                (Some(kernel_dir), Some(tools_dir), None) => SeL4Source::LocalDirectories {
+            let source = match (sel4.kernel_dir, sel4.tools_dir, sel4.util_libs_dir, sel4.version) {
+                (Some(kernel_dir), Some(tools_dir), Some(util_libs_dir), None) => SeL4Source::LocalDirectories {
                     kernel_dir,
                     tools_dir,
+                    util_libs_dir,
                 },
-                (None, None, Some(version)) => SeL4Source::Version(
+                (None, None, None, Some(version)) => SeL4Source::Version(
                     parse_version(&version).map_err(|_ve| ImportError::InvalidSeL4Source)?,
                 ),
-                (_, _, _) => return Err(ImportError::InvalidSeL4Source),
+                (_, _, _, _) => return Err(ImportError::InvalidSeL4Source),
             };
 
             Ok(Full {
@@ -366,9 +371,11 @@ pub mod full {
                 SeL4Source::LocalDirectories {
                     kernel_dir,
                     tools_dir,
+                    util_libs_dir,
                 } => {
                     sel4.insert_str("kernel_dir", format!("{}", kernel_dir.display()));
                     sel4.insert_str("tools_dir", format!("{}", tools_dir.display()));
+                    sel4.insert_str("util_libs_dir", format!("{}", util_libs_dir.display()));
                 }
             }
 
@@ -656,9 +663,11 @@ pub mod contextualized {
                     SeL4Source::LocalDirectories {
                         kernel_dir,
                         tools_dir,
+                        util_libs_dir,
                     } => SeL4Source::LocalDirectories {
                         kernel_dir: kernel_dir.relative_to(base_dir),
                         tools_dir: tools_dir.relative_to(base_dir),
+                        util_libs_dir: util_libs_dir.relative_to(base_dir),
                     },
                 },
                 context,
@@ -704,7 +713,7 @@ impl Display for ImportError {
             ImportError::TypeMismatch { name, expected, found } => f.write_fmt(format_args!("Config toml contained a type mismatch for {}. Found {} when {} was expected", name, found, expected)),
             ImportError::NonSingleValue { found } => f.write_fmt(format_args!("Config toml contained a type problem where a singular value was expected but, {} was found", found)),
             ImportError::NoPlatformSupplied => f.write_fmt(format_args!("Config contextualization failed because no platform was supplied and no default was available.")),
-            ImportError::InvalidSeL4Source => f.write_fmt(format_args!("Config toml's [sel4] table must contain either a single `version` property or both `kernel_dir` and `tools_dir` properties.")),
+            ImportError::InvalidSeL4Source => f.write_fmt(format_args!("Config toml's [sel4] table must contain either a single `version` property or all of the `kernel_dir`, `tools_dir`, and `util_libs_dir` properties.")),
             ImportError::NoBuildSupplied { platform, profile } => f.write_fmt(format_args!("Config toml must contain a [build.platform.profile] table like [build.{}.{}] but none was supplied.", platform, profile)),
         }
     }
@@ -728,6 +737,7 @@ mod tests {
                     source: SeL4Source::LocalDirectories {
                         kernel_dir: PathBuf::from("."),
                         tools_dir: PathBuf::from("."),
+                        util_libs_dir: PathBuf::from("."),
                     },
                     default_platform: None,
                     config: Default::default(),

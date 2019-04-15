@@ -57,6 +57,17 @@ fn version_to_sel4_kernel_release_sha(version: &SemVersion) -> Option<&'static s
         _ => None,
     }
 }
+
+fn version_to_util_libs_sha(version: &SemVersion) -> Option<&'static str> {
+    match (version.major, version.minor) {
+        (8, 0) => Some("48a144dd901459fdf263836569e017cf4da8d700"),
+        (9, 0) => Some("f667cfa2f8aae95db65a991ba7dfedf75cb6e46e"),
+        (10, 0) => Some("9e249f940b84a9c803f79d34fbcfc5c98e722bfc"),
+        (10, 1) => Some("2c4524ce84652960cda127a8b0ae6690022988ee"),
+        _ => None,
+    }
+}
+
 fn clone_at_branch_or_tag(repo: &str, branch_or_tag: &str, dir: &Path) {
     let mut git_clone_command = Command::new("git");
     git_clone_command
@@ -91,6 +102,7 @@ fn is_dir_absent_or_empty(dir_path: &Path) -> bool {
 pub struct ResolvedSeL4Source {
     pub kernel_dir: PathBuf,
     pub tools_dir: PathBuf,
+    pub util_libs_dir: PathBuf,
 }
 
 /// dest_dir: Where downloaded source will be placed, if necessary
@@ -102,9 +114,11 @@ pub fn resolve_sel4_source(
         model::SeL4Source::LocalDirectories {
             kernel_dir,
             tools_dir,
+            util_libs_dir,
         } => Ok(ResolvedSeL4Source {
             kernel_dir: kernel_dir.to_owned(),
             tools_dir: tools_dir.to_owned(),
+            util_libs_dir: util_libs_dir.to_owned(),
         }),
         model::SeL4Source::Version(v) => {
             // Confirm we can support the requested version
@@ -112,6 +126,8 @@ pub fn resolve_sel4_source(
                 .expect(&format!("Unsupported version: {}", v));
             let _tools_sha =
                 version_to_sel4_tools_sha(&v).expect(&format!("Unsupported version: {}", v));
+            let _util_libs_sha =
+                version_to_util_libs_sha(&v).expect(&format!("Unsupported version: {}", v));
 
             let kernel_dir = dest_dir.join(format!("seL4_kernel-{}", v));
             let kernel_needs_content = is_dir_absent_or_empty(&kernel_dir);
@@ -130,7 +146,7 @@ pub fn resolve_sel4_source(
             let tools_needs_content = is_dir_absent_or_empty(&tools_dir);
             fs::create_dir_all(&tools_dir).expect("Failed to create tools dir");
             let tools_dir = fs::canonicalize(&tools_dir)
-                .expect(&format!("Tools dir: {}", &tools_dir.display()));
+                .expect(&format!("seL4_tools dir: {}", &tools_dir.display()));
             if tools_needs_content {
                 clone_at_branch_or_tag(
                     "git://github.com/seL4/seL4_tools.git",
@@ -139,9 +155,23 @@ pub fn resolve_sel4_source(
                 );
             }
 
+            let util_libs_dir = dest_dir.join(format!("seL4_util_libs-{}", v));
+            let util_libs_needs_content = is_dir_absent_or_empty(&util_libs_dir);
+            fs::create_dir_all(&util_libs_dir).expect("Failed to create util_libs dir");
+            let util_libs_dir = fs::canonicalize(&util_libs_dir)
+                .expect(&format!("util_libs dir: {}", &util_libs_dir.display()));
+            if util_libs_needs_content {
+                clone_at_branch_or_tag(
+                    "git://github.com/seL4/util_libs.git",
+                    &format!("{}.{}.x-compatible", v.major, v.minor),
+                    &util_libs_dir,
+                );
+            }
+
             Ok(ResolvedSeL4Source {
                 kernel_dir,
                 tools_dir,
+                util_libs_dir,
             })
         }
     }
@@ -169,6 +199,7 @@ pub fn build_sel4(
     out_dir: &Path,
     kernel_dir: &Path,
     tools_dir: &Path,
+    util_libs_dir: &Path,
     config: &model::contextualized::Contextualized,
     build_mode: SeL4BuildMode,
 ) -> SeL4BuildOutcome {
@@ -239,13 +270,19 @@ pub fn build_sel4(
         .env("SEL4_TOOLS_DIR", tools_dir.to_owned());
 
     if build_mode == SeL4BuildMode::Kernel {
-        let rti = &config
+        let rti = PathBuf::from(&config
             .build
             .root_task
             .as_ref()
             .expect("A build profile's  `root_task_image` is required for a kernel build")
-            .image_path;
-        cmake.env("ROOT_TASK_PATH", PathBuf::from(rti));
+            .image_path);
+
+        let util_libs_bin_dir = build_dir.join("util_libs");
+        fs::create_dir_all(&build_dir).expect("Failed to create util libs build dir");
+        println!("ROOT_TASK_PATH={}", rti.display());
+        cmake.env("ROOT_TASK_PATH", rti)
+            .env("UTIL_LIBS_SOURCE_PATH", util_libs_dir)
+            .env("UTIL_LIBS_BIN_PATH", &util_libs_bin_dir);
     }
 
     cmake.stdout(Stdio::inherit()).stderr(Stdio::inherit());
@@ -277,8 +314,8 @@ pub fn build_sel4(
         panic!("Explicitly supplying a KernelPlatform property interferes with the inner workings of the seL4 cmake build")
     }
     let kernel_platform = cmake_opts.get("KernelX86Platform").unwrap_or_else(|| {
-        cmake_opts.get("KernelArmPlatform").expect(
-            "KernelArmPlatform or KernelX86Platform missing but required as a sel4 config option",
+        cmake_opts.get("KernelARMPlatform").expect(
+            "KernelARMPlatform or KernelX86Platform missing but required as a sel4 config option",
         )
     });
     match build_mode {

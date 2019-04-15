@@ -20,6 +20,7 @@ root_task_image = 'release_image'
 default_platform = 'some_arbitrary_platform'
 kernel_dir = './deps/seL4'
 tools_dir = './deps/seL4_tools'
+util_libs_dir = './deps/util_libs'
 
 [sel4.config]
 KernelRetypeFanOutLimit = 256
@@ -58,7 +59,8 @@ fn full_parse_happy_path() {
     assert_eq!(
         SeL4Source::LocalDirectories {
             kernel_dir: PathBuf::from("./deps/seL4"),
-            tools_dir: PathBuf::from("./deps/seL4_tools")
+            tools_dir: PathBuf::from("./deps/seL4_tools"),
+            util_libs_dir: PathBuf::from("./deps/util_libs")
         },
         f.sel4.source
     );
@@ -142,7 +144,8 @@ fn happy_path_straight_to_contextualized() {
     assert_eq!(
         SeL4Source::LocalDirectories {
             kernel_dir: PathBuf::from("./deps/seL4"),
-            tools_dir: PathBuf::from("./deps/seL4_tools")
+            tools_dir: PathBuf::from("./deps/seL4_tools"),
+            util_libs_dir: PathBuf::from("./deps/util_libs")
         },
         f.sel4_source
     );

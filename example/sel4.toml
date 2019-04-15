@@ -25,7 +25,7 @@ KernelArmSel4Arch = 'aarch32'
 KernelSel4Arch = 'aarch32'
 
 [sel4.config.sabre]
-KernelArmPlatform = 'sabre'
+KernelARMPlatform = 'imx6'
 KernelHaveFPU = true
 
 [sel4.config.debug]
