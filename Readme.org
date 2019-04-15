@@ -6,4 +6,5 @@
 : cd example
 ** x86
 : cotransport build --arch x86_64 --platform pc99
-: cotransport build --arch arm --platform
+: cotransport build --arch arm --platform sabre
+
