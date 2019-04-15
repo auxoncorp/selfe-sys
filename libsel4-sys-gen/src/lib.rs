@@ -4,6 +4,11 @@
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 
+// Allow std in tests
+#[cfg(test)]
+#[macro_use]
+extern crate std;
+
 #[macro_use]
 extern crate static_assertions;
 
@@ -44,15 +49,24 @@ impl Debug for seL4_Fault {
     }
 }
 
-// bitfield types:
-// pub fn seL4_Fault_NullFault_ptr_new(seL4_Fault_ptr: *mut seL4_Fault_t);
-// pub fn seL4_Fault_CapFault_ptr_new(
-// pub fn seL4_Fault_UnknownSyscall_ptr_new(
-// pub fn seL4_Fault_UserException_ptr_new(
-// pub fn seL4_Fault_VMFault_ptr_new(
-// pub fn seL4_MessageInfo_ptr_new(
-// pub fn seL4_CNode_CapData_ptr_new(
-// pub fn seL4_CapRights_ptr_new(
+impl Debug for seL4_MessageInfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "seL4_MessageInfo")
+    }
+}
+
+impl Debug for seL4_CapRights {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "seL4_CapRights")
+    }
+}
+
+impl Debug for seL4_CNode_CapData {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "seL4_CNode_CapData")
+    }
+}
+
 include!(concat!(env!("OUT_DIR"), "/generated_tests.rs"));
 
 mod compile_time_assertions {
