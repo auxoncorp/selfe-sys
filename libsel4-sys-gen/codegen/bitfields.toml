@@ -6,20 +6,196 @@ fields = []
 [[bitfield_types]]
 name = "CapFault"
 is_fault = true
-fields = ["IP", "Addr", "InRecvPhase", "LookupFailureType", "MR4", "MR5", "MR6"]
+  [[bitfield_types.fields]]
+  name = "IP"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "Addr"
+  width = 64
+  
+  [[bitfield_types.fields]]
+  name = "InRecvPhase"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "LookupFailureType"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "MR4"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "MR5"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "MR6"
+  width = 64
 
 [[bitfield_types]]
 name = "UnknownSyscall"
 is_fault = true
-fields = ["RAX", "RBX", "RCX", "RDX", "RSI", "RDI", "RBP", "R8", "R9", "R10", "R11",
-          "R12", "R13", "R14", "R15", "FaultIP", "RSP", "FLAGS", "Syscall"]
+  [[bitfield_types.fields]]
+  name = "RAX"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "RBX"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "RCX"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "RDX"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "RSI"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "RDI"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "RBP"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "R8"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "R9"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "R10"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "R11"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "R12"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "R13"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "R14"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "R15"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "FaultIP"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "RSP"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "FLAGS"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "Syscall"
+  width = 64
 
 [[bitfield_types]]
 name = "UserException"
 is_fault = true
-fields = ["FaultIP", "Stack", "FLAGS", "Number", "Code"]
+  [[bitfield_types.fields]]
+  name = "FaultIP"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "Stack"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "FLAGS"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "Number"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "Code"
+  width = 64
 
 [[bitfield_types]]
 name = "VMFault"
 is_fault = true
-fields = ["IP", "Addr", "PrefetchFault", "FSR"]
+  [[bitfield_types.fields]]
+  name = "IP"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "Addr"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "PrefetchFault"
+  width = 64
+
+  [[bitfield_types.fields]]
+  name = "FSR"
+  width = 64
+
+[[bitfield_types]]
+name = "MessageInfo"
+is_fault = false
+  [[bitfield_types.fields]]
+  name = "label"
+  width = 52
+
+  [[bitfield_types.fields]]
+  name = "capsUnwrapped"
+  width = 3
+
+  [[bitfield_types.fields]]
+  name = "extraCaps"
+  width = 2
+
+  [[bitfield_types.fields]]
+  name = "length"
+  width = 7
+
+[[bitfield_types]]
+name = "CapRights"
+is_fault = false
+  [[bitfield_types.fields]]
+  name = "capAllowGrant"
+  width = 1
+
+  [[bitfield_types.fields]]
+  name = "capAllowRead"
+  width = 1
+
+  [[bitfield_types.fields]]
+  name = "capAllowWrite"
+  width = 1
+
+[[bitfield_types]]
+name = "CNode_CapData"
+is_fault = false
+  [[bitfield_types.fields]]
+  name = "guard"
+  width = 58
+
+  [[bitfield_types.fields]]
+  name = "guardSize"
+  width = 6

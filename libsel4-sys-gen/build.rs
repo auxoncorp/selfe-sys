@@ -19,6 +19,9 @@ use proc_macro2::{Ident, Span, TokenStream};
 extern crate quote;
 use quote::quote;
 
+extern crate itertools;
+use itertools::Itertools;
+
 const BLACKLIST_TYPES: &'static [&'static str] = &[
     "seL4_CPtr",
     "seL4_Word",
@@ -138,7 +141,13 @@ fn rust_arch_to_arch(arch: &str) -> String {
 struct BitfieldType {
     name: String,
     is_fault: bool,
-    fields: Vec<String>,
+    fields: Vec<BitfieldField>,
+}
+
+#[derive(Debug, Clone)]
+struct BitfieldField {
+    name: String,
+    width: i64,
 }
 
 fn load_bitfields_toml() -> Vec<BitfieldType> {
@@ -175,7 +184,22 @@ fn load_bitfields_toml() -> Vec<BitfieldType> {
                 .and_then(|v| v.as_array())
                 .expect("fields")
                 .iter()
-                .map(|f| f.as_str().expect("field").to_owned())
+                .map(|val| {
+                    let t = val.as_table().expect("field");
+                    BitfieldField {
+                        name: t
+                            .get("name")
+                            .expect("name")
+                            .as_str()
+                            .expect("field name must be string")
+                            .to_owned(),
+                        width: t
+                            .get("width")
+                            .expect("width")
+                            .as_integer()
+                            .expect("field width must be integer"),
+                    }
+                })
                 .collect(),
         };
 
@@ -191,6 +215,20 @@ struct FieldAccess {
     name: Ident,
     getter: Ident,
     setter: Ident,
+    field: BitfieldField
+}
+
+fn gen_for_field(f: &BitfieldField) -> TokenStream {
+    if f.width == 64 {
+        quote! {
+            any::<u64>()
+        }
+    } else {
+        let max: u64 = 1 << (f.width - 1);
+        quote! {
+            0..#max
+        }
+    }
 }
 
 fn gen_bitfield_test(bf: &BitfieldType) -> TokenStream {
@@ -204,7 +242,7 @@ fn gen_bitfield_test(bf: &BitfieldType) -> TokenStream {
     let field_names = bf
         .fields
         .iter()
-        .map(|f| Ident::new(f, Span::call_site()))
+        .map(|f| Ident::new(&f.name.to_owned(), Span::call_site()))
         .collect::<Vec<_>>();
 
     let param_struct_name = Ident::new(&format!("{}Params", name), Span::call_site());
@@ -221,14 +259,14 @@ fn gen_bitfield_test(bf: &BitfieldType) -> TokenStream {
         Span::call_site(),
     );
     let constructor_params = field_names.clone();
-    let constructor_return_type = if is_fault {
-        quote!{ seL4_Fault }
+    let record_type = if is_fault {
+        Ident::new("seL4_Fault", Span::call_site())
     } else {
-        unimplemented!()
+        Ident::new(&format!("seL4_{}_t", name), Span::call_site())
     };
     let constructor_code = quote! {
         impl #param_struct_name {
-            fn create(&self) -> #constructor_return_type {
+            fn create(&self) -> #record_type {
                 unsafe {
                     #constructor(
                         #(self.#constructor_params),*
@@ -238,23 +276,28 @@ fn gen_bitfield_test(bf: &BitfieldType) -> TokenStream {
         }
     };
 
+    // Tuples only work in proptest up to 12 elements. To work around this, set up
+    // the generators to have sub-generator tuples in groups of 10.
     let gen_params_fn = Ident::new(&format!("gen_{}_params", name), Span::call_site());
-    let field_count = field_names.len();
-    let gen_params_fn_init_code = field_names
-        .iter()
-        .zip(0..field_count)
-        .map(|(field, index)| {
-            quote! {
-                #field: a[#index]
-            }
-        });
-    let gen_params_fn_code = if field_count > 0 {
+    let fields_gen_code_in_tens = bf.fields.iter().map(gen_for_field).chunks(10);
+    let fields_gen_tuples_code = fields_gen_code_in_tens
+        .into_iter()
+        .map(|chunk| quote! {(#(#chunk),*)});
+    let field_names_1 = field_names.clone();
+    let field_names_in_tens = field_names.chunks(10);
+    let field_name_tuples_code = field_names_in_tens
+        .into_iter()
+        .map(|chunk| quote! {(#(#chunk),*)});
+    let gen_params_fn_code = if field_names.len() > 0 {
         quote! {
+            #[allow(unused_parens)]
             fn #gen_params_fn() -> impl Strategy<Value = #param_struct_name> {
-                any::<[u64;#field_count]>()
-                    .prop_map(|a| #param_struct_name {
-                        #(#gen_params_fn_init_code),*
-                    })
+                (#(#fields_gen_tuples_code),*)
+                    .prop_map(
+                        |(#(#field_name_tuples_code),*)|
+                        #param_struct_name {
+                            #(#field_names_1),*
+                        })
             }
         }
     } else {
@@ -265,27 +308,23 @@ fn gen_bitfield_test(bf: &BitfieldType) -> TokenStream {
         }
     };
     let gen_fn = Ident::new(&format!("gen_{}", name), Span::call_site());
-    let gen_fn_value_type = if is_fault {
-        Ident::new("seL4_Fault", Span::call_site())
-    } else {
-        unimplemented!()
-    };
     let gen_fn_code = quote! {
-        fn #gen_fn() -> impl Strategy<Value = #gen_fn_value_type> {
+        fn #gen_fn() -> impl Strategy<Value = #record_type> {
             #gen_params_fn().prop_map(|params| params.create())
         }
     };
 
-    let field_access = field_names
+    let field_access = bf.fields
         .iter()
-        .map(|field| FieldAccess {
-            name: field.clone(),
+        .map(|f| FieldAccess {
+            name: Ident::new(&f.name.to_owned(), Span::call_site()),
+            field: f.clone(),
             getter: Ident::new(
                 &format!(
                     "seL4_{}{}_ptr_get_{}",
                     if is_fault { "Fault_" } else { "" },
                     name,
-                    field
+                    f.name,
                 ),
                 Span::call_site(),
             ),
@@ -294,7 +333,7 @@ fn gen_bitfield_test(bf: &BitfieldType) -> TokenStream {
                     "seL4_{}{}_ptr_set_{}",
                     if is_fault { "Fault_" } else { "" },
                     name,
-                    field
+                    f.name
                 ),
                 Span::call_site(),
             ),
@@ -303,16 +342,17 @@ fn gen_bitfield_test(bf: &BitfieldType) -> TokenStream {
 
     let test_constructor_assertions = field_access.iter().map(|f| {
         let field_name = f.name.clone();
+        let field_name_str = format!("{}", field_name);
         let field_getter = f.getter.clone();
 
         quote! {
-            assert!(#field_getter(&mut val) == params.#field_name);
+            assert_eq!(#field_getter(&mut val), params.#field_name, #field_name_str);
         }
     });
     let test_constructor_code = quote! {
         proptest! {
             #[test]
-            #[allow(unused_variables, unused_mut, unused_unsafe)]
+            #[allow(unused_variables, unused_mut, unused_unsafe, unused_parens)]
             fn constructor_fields(params in #gen_params_fn()) {
                 unsafe {
                     let mut val = params.create();
@@ -322,18 +362,38 @@ fn gen_bitfield_test(bf: &BitfieldType) -> TokenStream {
         }
     };
 
-    let test_get_set_code = field_access.iter().map(|f| {
-        let test_name = Ident::new(&format!("field_{}", f.name), Span::call_site());
-        let getter = &f.getter;
-        let setter = &f.setter;
+    let test_fault_type_code = if bf.is_fault {
+        let expected_fault_type = Ident::new(&format!("seL4_Fault_tag_seL4_Fault_{}", bf.name), Span::call_site());
 
         quote! {
             proptest! {
                 #[test]
-                fn #test_name(mut record in #gen_fn(), val in any::<u64>()) {
+                #[allow(unused_parens)]
+                fn get_fault_type(mut record in #gen_fn()) {
+                    unsafe {
+                        assert_eq!(seL4_Fault_ptr_get_seL4_FaultType(&mut record), #expected_fault_type as u64);
+                    }
+                }
+            }
+        }
+    } else {
+        quote! { }
+    };
+
+    let test_get_set_code = field_access.iter().map(|f| {
+        let test_name = Ident::new(&format!("field_{}", f.name), Span::call_site());
+        let getter = &f.getter;
+        let setter = &f.setter;
+        let gen_code = gen_for_field(&f.field);
+
+        quote! {
+            proptest! {
+                #[test]
+                #[allow(unused_parens)]
+                fn #test_name(mut record in #gen_fn(), val in #gen_code) {
                     unsafe {
                         #setter(&mut record, val);
-                        assert!(#getter(&mut record) == val);
+                        assert_eq!(#getter(&mut record), val);
                     }
                 }
             }
@@ -353,6 +413,7 @@ fn gen_bitfield_test(bf: &BitfieldType) -> TokenStream {
             #gen_fn_code
 
             #test_constructor_code
+            #test_fault_type_code
             #(#test_get_set_code)*
         }
     }
