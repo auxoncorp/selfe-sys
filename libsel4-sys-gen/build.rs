@@ -215,7 +215,7 @@ struct FieldAccess {
     name: Ident,
     getter: Ident,
     setter: Ident,
-    field: BitfieldField
+    field: BitfieldField,
 }
 
 fn gen_for_field(f: &BitfieldField) -> TokenStream {
@@ -314,7 +314,8 @@ fn gen_bitfield_test(bf: &BitfieldType) -> TokenStream {
         }
     };
 
-    let field_access = bf.fields
+    let field_access = bf
+        .fields
         .iter()
         .map(|f| FieldAccess {
             name: Ident::new(&f.name.to_owned(), Span::call_site()),
@@ -363,7 +364,10 @@ fn gen_bitfield_test(bf: &BitfieldType) -> TokenStream {
     };
 
     let test_fault_type_code = if bf.is_fault {
-        let expected_fault_type = Ident::new(&format!("seL4_Fault_tag_seL4_Fault_{}", bf.name), Span::call_site());
+        let expected_fault_type = Ident::new(
+            &format!("seL4_Fault_tag_seL4_Fault_{}", bf.name),
+            Span::call_site(),
+        );
 
         quote! {
             proptest! {
@@ -377,7 +381,7 @@ fn gen_bitfield_test(bf: &BitfieldType) -> TokenStream {
             }
         }
     } else {
-        quote! { }
+        quote! {}
     };
 
     let test_get_set_code = field_access.iter().map(|f| {

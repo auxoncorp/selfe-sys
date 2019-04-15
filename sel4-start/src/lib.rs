@@ -10,7 +10,10 @@
 
 #![no_std]
 #![feature(lang_items, core_intrinsics, asm, naked_functions)]
-#![cfg_attr(all(target_arch = "arm", target_pointer_width = "32"), feature(global_asm))]
+#![cfg_attr(
+    all(target_arch = "arm", target_pointer_width = "32"),
+    feature(global_asm)
+)]
 
 extern crate sel4_sys;
 

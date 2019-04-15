@@ -270,17 +270,20 @@ pub fn build_sel4(
         .env("SEL4_TOOLS_DIR", tools_dir.to_owned());
 
     if build_mode == SeL4BuildMode::Kernel {
-        let rti = PathBuf::from(&config
-            .build
-            .root_task
-            .as_ref()
-            .expect("A build profile's  `root_task_image` is required for a kernel build")
-            .image_path);
+        let rti = PathBuf::from(
+            &config
+                .build
+                .root_task
+                .as_ref()
+                .expect("A build profile's  `root_task_image` is required for a kernel build")
+                .image_path,
+        );
 
         let util_libs_bin_dir = build_dir.join("util_libs");
         fs::create_dir_all(&build_dir).expect("Failed to create util libs build dir");
         println!("ROOT_TASK_PATH={}", rti.display());
-        cmake.env("ROOT_TASK_PATH", rti)
+        cmake
+            .env("ROOT_TASK_PATH", rti)
             .env("UTIL_LIBS_SOURCE_PATH", util_libs_dir)
             .env("UTIL_LIBS_BIN_PATH", &util_libs_bin_dir);
     }

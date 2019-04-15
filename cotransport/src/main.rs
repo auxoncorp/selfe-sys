@@ -138,12 +138,14 @@ fn main() {
         }
         Execution::Simulate(b) => {
             let (outcome, config) = build_kernel(&b);
-            if let SeL4BuildOutcome::Kernel{
+            if let SeL4BuildOutcome::Kernel {
                 kernel_path,
                 root_image_path,
                 ..
-            }  = outcome {
-                simulate::run_simulate(&b, &kernel_path, &root_image_path, &config).expect("Simulation failed");
+            } = outcome
+            {
+                simulate::run_simulate(&b, &kernel_path, &root_image_path, &config)
+                    .expect("Simulation failed");
             } else {
                 panic!("Should not have built a static lib when a kernel is expected")
             }

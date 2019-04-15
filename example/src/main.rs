@@ -5,12 +5,11 @@ use core::panic::PanicInfo;
 
 use core::fmt::Write;
 use sel4_start::{self, DebugOutHandle};
-use sel4_sys::{seL4_TCB_Suspend, seL4_CapInitThreadTCB};
+use sel4_sys::{seL4_CapInitThreadTCB, seL4_TCB_Suspend};
 
 fn main() {
-
     #[cfg(target_arch = "arm")]
-        let arch = "arm";
+    let arch = "arm";
     #[cfg(target_arch = "x86_64")]
     let arch = "x86_64";
 
@@ -25,13 +24,15 @@ fn main() {
     )
     .unwrap();
 
-    let suspend_error = unsafe {
-        seL4_TCB_Suspend(seL4_CapInitThreadTCB as usize)
-    };
+    let suspend_error = unsafe { seL4_TCB_Suspend(seL4_CapInitThreadTCB as usize) };
     if suspend_error != 0 {
-        writeln!(DebugOutHandle, "Error suspending root task thread: {}", suspend_error).unwrap();
+        writeln!(
+            DebugOutHandle,
+            "Error suspending root task thread: {}",
+            suspend_error
+        )
+        .unwrap();
     }
-
 }
 
 #[panic_handler]
