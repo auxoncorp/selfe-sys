@@ -18,10 +18,10 @@ root_task_image = 'release_image'
 [sel4.config]
 KernelRetypeFanOutLimit = 256
 
-[sel4.config.arm32]
+[sel4.config.aarch32]
 KernelArmFastMode = true
 
-[sel4.config.arm64]
+[sel4.config.aarch64]
 KernelArmFastMode = false
 
 [sel4.config.debug]
@@ -80,12 +80,12 @@ fn full_parse_happy_path() {
     let release_printing = f.sel4.config.release_config.get("KernelPrinting").unwrap();
     assert_eq!(&SingleValue::Boolean(false), release_printing);
 
-    let arm32 = f.sel4.config.contextual_config.get("arm32").unwrap();
+    let arm32 = f.sel4.config.contextual_config.get("aarch32").unwrap();
     assert_eq!(1, arm32.len());
     let fast_mode_32 = arm32.get("KernelArmFastMode").unwrap();
     assert_eq!(&SingleValue::Boolean(true), fast_mode_32);
 
-    let arm64 = f.sel4.config.contextual_config.get("arm64").unwrap();
+    let arm64 = f.sel4.config.contextual_config.get("aarch64").unwrap();
     assert_eq!(1, arm64.len());
     let fast_mode_64 = arm64.get("KernelArmFastMode").unwrap();
     assert_eq!(&SingleValue::Boolean(false), fast_mode_64);
@@ -110,15 +110,23 @@ fn full_parse_happy_path() {
 
     let resolved_some_arbitrary_platform_default = contextualized::Contextualized::from_full(
         f.clone(),
-        "arm32",
+        Arch::Arm,
+        Sel4Arch::Aarch32,
         true,
-        "some_arbitrary_platform",
+        Platform("some_arbitrary_platform".to_owned()),
         None,
     )
     .unwrap();
 
-    let resolved_sabre =
-        contextualized::Contextualized::from_full(f.clone(), "arm32", true, "sabre", None).unwrap();
+    let resolved_sabre = contextualized::Contextualized::from_full(
+        f.clone(),
+        Arch::Arm,
+        Sel4Arch::Aarch32,
+        true,
+        Platform("sabre".to_string()),
+        None,
+    )
+    .unwrap();
     assert_ne!(resolved_some_arbitrary_platform_default, resolved_sabre);
 }
 
@@ -135,8 +143,15 @@ fn round_trip() {
 
 #[test]
 fn happy_path_straight_to_contextualized() {
-    let f =
-        contextualized::Contextualized::from_str(EXAMPLE, "arm32", true, "sabre", None).unwrap();
+    let f = contextualized::Contextualized::from_str(
+        EXAMPLE,
+        Arch::Arm,
+        Sel4Arch::Aarch32,
+        true,
+        Platform("sabre".to_owned()),
+        None,
+    )
+    .unwrap();
     assert_eq!(
         SeL4Sources {
             kernel: RepoSource::LocalPath(PathBuf::from("./deps/seL4")),
@@ -145,9 +160,11 @@ fn happy_path_straight_to_contextualized() {
         },
         f.sel4_sources
     );
-    assert_eq!("arm32".to_owned(), f.context.target);
-    assert_eq!("sabre".to_owned(), f.context.platform);
+    assert_eq!(Arch::Arm, f.context.arch);
+    assert_eq!(Sel4Arch::Aarch32, f.context.sel4_arch);
+    assert_eq!(Platform("sabre".to_owned()), f.context.platform);
     assert_eq!(true, f.context.is_debug);
+    println!("{:#?}", f.sel4_config);
     assert_eq!(5, f.sel4_config.len());
     assert_eq!(
         &SingleValue::Integer(256),

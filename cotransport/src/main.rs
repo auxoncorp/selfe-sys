@@ -2,6 +2,7 @@ use clap::{App, Arg, SubCommand};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::{env, fs};
+use std::str::FromStr;
 
 extern crate confignoble;
 
@@ -10,6 +11,7 @@ mod simulate;
 use confignoble::compilation::{
     build_sel4, resolve_sel4_sources, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome,
 };
+use confignoble::model::{Arch, Sel4Arch, Platform};
 
 /// Walk up the directory tree from `start_dir`, looking for "sel4.toml"
 fn find_sel4_toml(start_dir: &Path) -> Option<PathBuf> {
@@ -31,8 +33,9 @@ fn find_sel4_toml(start_dir: &Path) -> Option<PathBuf> {
 }
 
 pub struct BuildParams {
-    arch: String,
-    platform: String,
+    sel4_arch: Sel4Arch,
+    arch: Option<Arch>,
+    platform: Platform,
     is_debug: bool,
     is_verbose: bool,
 }
@@ -49,12 +52,12 @@ trait AppExt {
 impl<'a, 'b> AppExt for App<'a, 'b> {
     fn add_build_params(self) -> Self {
         self.arg(
-            Arg::with_name("arch")
+            Arg::with_name("sel4_arch")
                 .short("a")
-                .long("arch")
-                .value_name("ARCH")
+                .long("sel4_arch")
+                .value_name("SEL4_ARCH")
                 .required(true)
-                .help("seL4 architecture target, like x86_64 or arm"),
+                .help("seL4 architecture (sel4_arch), like x86_64 or aarch32"),
         )
         .arg(
             Arg::with_name("platform")
@@ -85,6 +88,16 @@ impl<'a, 'b> AppExt for App<'a, 'b> {
                 .conflicts_with("debug")
                 .help("build with release configuration"),
         )
+        .arg(
+            Arg::with_name("arch")
+                .long("arch")
+                .takes_value(true)
+                .value_name("ARCH")
+                .help(
+                    "explicitly specify arch, as sel4 uses the term (arm, x86, or riscv). \
+                     If not specified, this is automatically derived from sel4_arch.",
+                ),
+        )
     }
 }
 
@@ -101,15 +114,24 @@ impl Execution {
         fn parse_build_params(matches: &clap::ArgMatches<'_>) -> BuildParams {
             let is_verbose = matches.is_present("verbose");
             let is_debug = !matches.is_present("release");
-            let arch = matches
-                .value_of("arch")
-                .expect("Missing required arch argument")
-                .to_owned();
-            let platform = matches
+            let raw_sel4_arch = matches
+                .value_of("sel4_arch")
+                .expect("Missing required arch argument");
+            let sel4_arch = Sel4Arch::from_str(raw_sel4_arch)
+                .expect("sel4_arch argument is not a known sel4_arch value.");
+
+            let platform = Platform(matches
                 .value_of("platform")
                 .expect("Missing required platform argument")
-                .to_owned();
+                .to_owned());
+
+            let arch = match matches.value_of("arch") {
+                Some(s) => Some(Arch::from_str(s).expect("arch argument is not a known arch value")),
+                None => None
+            };
+
             BuildParams {
+                sel4_arch,
                 arch,
                 platform,
                 is_debug,
@@ -161,8 +183,6 @@ fn build_kernel(
     SeL4BuildOutcome,
     confignoble::model::contextualized::Contextualized,
 ) {
-    let target_arch = &build_params.arch;
-    let sel4_platform = &build_params.platform;
     let is_debug = build_params.is_debug;
     let pwd = &env::current_dir().unwrap();
     let config_file_path = find_sel4_toml(&pwd).unwrap_or_else(|| {
@@ -181,9 +201,10 @@ fn build_kernel(
 
     let config = confignoble::model::contextualized::Contextualized::from_str(
         &config_content,
-        target_arch,
+        build_params.arch.unwrap_or_else(|| Arch::from_sel4_arch(build_params.sel4_arch)),
+        build_params.sel4_arch,
         is_debug,
-        sel4_platform,
+        build_params.platform.clone(),
         Some(config_file_dir),
     )
     .expect("Can't process config");
@@ -209,7 +230,9 @@ fn build_kernel(
             .arg(&make_root_task_command)
             .current_dir(&config_file_dir)
             .env("SEL4_CONFIG_PATH", &config_file_path)
-            .env("SEL4_PLATFORM", &config.context.platform)
+            .env("SEL4_PLATFORM", &config.context.platform.to_string())
+            .env("SEL4_OVERRIDE_ARCH", &config.context.arch.to_string())
+            .env("SEL4_OVERRIDE_SEL4_ARCH", &config.context.sel4_arch.to_string())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit());
 

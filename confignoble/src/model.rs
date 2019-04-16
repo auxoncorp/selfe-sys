@@ -1068,9 +1068,9 @@ mod tests {
     #[test]
     fn override_default_platform_contextualization() {
         let mut f = full::Full::empty();
-        let expected = "sabre".to_owned();
+        let expected = Platform("sabre".to_owned());
         f.build.insert(
-            expected.clone(),
+            expected.to_string(),
             full::PlatformBuild {
                 cross_compiler_prefix: None,
                 toolchain_dir: None,
@@ -1081,11 +1081,19 @@ mod tests {
                 }),
             },
         );
-        let c =
-            contextualized::Contextualized::from_full(f, "target", false, &expected, None).unwrap();
+        let c = contextualized::Contextualized::from_full(
+            f,
+            Arch::Arm,
+            Sel4Arch::Aarch32,
+            false,
+            expected.clone(),
+            None,
+        )
+        .unwrap();
         assert_eq!(expected, c.context.platform);
         assert_eq!(false, c.context.is_debug);
-        assert_eq!("target".to_owned(), c.context.target);
+        assert_eq!(Arch::Arm, c.context.arch);
+        assert_eq!(Sel4Arch::Aarch32, c.context.sel4_arch);
         assert_eq!(
             "cmake",
             c.build
