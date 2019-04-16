@@ -1,6 +1,7 @@
 [sel4]
-default_platform = 'pc99'
-version = "10.1.1"
+kernel = { git = "https://github.com/seL4/seL4" , tag = "10.1.1" }
+tools = { git = "https://github.com/seL4/seL4_tools" , branch = "10.1.x-compatible" }
+util_libs  = { git = "https://github.com/seL4/util_libs" , branch = "10.1.x-compatible" }
 
 
 [sel4.config.x86_64]

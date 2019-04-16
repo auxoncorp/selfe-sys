@@ -8,7 +8,7 @@ extern crate confignoble;
 mod simulate;
 
 use confignoble::compilation::{
-    build_sel4, resolve_sel4_source, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome,
+    build_sel4, resolve_sel4_sources, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome,
 };
 
 /// Walk up the directory tree from `start_dir`, looking for "sel4.toml"
@@ -161,8 +161,8 @@ fn build_kernel(
     SeL4BuildOutcome,
     confignoble::model::contextualized::Contextualized,
 ) {
-    let target_arch = build_params.arch.to_owned();
-    let sel4_platform = build_params.platform.to_owned();
+    let target_arch = &build_params.arch;
+    let sel4_platform = &build_params.platform;
     let is_debug = build_params.is_debug;
     let pwd = &env::current_dir().unwrap();
     let config_file_path = find_sel4_toml(&pwd).unwrap_or_else(|| {
@@ -181,9 +181,9 @@ fn build_kernel(
 
     let config = confignoble::model::contextualized::Contextualized::from_str(
         &config_content,
-        target_arch.to_owned(),
+        target_arch,
         is_debug,
-        Some(sel4_platform.to_owned()),
+        sel4_platform,
         Some(config_file_dir),
     )
     .expect("Can't process config");
@@ -194,7 +194,7 @@ fn build_kernel(
         kernel_dir,
         tools_dir,
         util_libs_dir,
-    } = resolve_sel4_source(&config.sel4_source, &out_dir.join("source"))
+    } = resolve_sel4_sources(&config.sel4_sources, &out_dir.join("source"))
         .expect("resolve sel4 source");
 
     let root_task = config.build.root_task.as_ref()

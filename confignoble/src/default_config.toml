@@ -1,6 +1,7 @@
 [sel4]
-default_platform = 'pc99'
-version = '10.1.1'
+kernel = { git = "https://github.com/seL4/seL4" , tag = "10.1.1" }
+tools = { git = "https://github.com/seL4/seL4_tools" , branch = "10.1.x-compatible" }
+util_libs  = { git = "https://github.com/seL4/util_libs" , rev = "2c4524ce84652960cda127a8b0ae6690022988ee" }
 
 [sel4.config]
 KernelRetypeFanOutLimit = 256

@@ -1,4 +1,3 @@
-use semver_parser::version::{parse as parse_version, Version as SemVersion};
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fmt::Display;
@@ -17,16 +16,6 @@ pub fn get_default_config() -> full::Full {
         .expect("Default config content should always be valid.")
 }
 
-#[derive(Debug, Clone, PartialEq, Hash)]
-pub enum SeL4Source {
-    Version(SemVersion),
-    LocalDirectories {
-        kernel_dir: PathBuf,
-        tools_dir: PathBuf,
-        util_libs_dir: PathBuf,
-    },
-}
-
 pub(crate) mod raw {
     use super::full::{PlatformBuild, PlatformBuildProfile};
     use super::*;
@@ -37,11 +26,9 @@ pub(crate) mod raw {
     }
 
     pub(crate) struct SeL4 {
-        pub(crate) kernel_dir: Option<PathBuf>,
-        pub(crate) tools_dir: Option<PathBuf>,
-        pub(crate) util_libs_dir: Option<PathBuf>,
-        pub(crate) version: Option<String>,
-        pub(crate) default_platform: Option<String>,
+        pub(crate) kernel: TomlTable,
+        pub(crate) tools: TomlTable,
+        pub(crate) util_libs: TomlTable,
         pub(crate) config: BTreeMap<String, TomlValue>,
     }
 
@@ -57,19 +44,16 @@ pub(crate) mod raw {
             })?;
 
             fn parse_sel4(table: &TomlTable) -> Result<SeL4, ImportError> {
-                let kernel_dir = parse_optional_string(table, "kernel_dir")?.map(PathBuf::from);
-                let tools_dir = parse_optional_string(table, "tools_dir")?.map(PathBuf::from);
-                let util_libs_dir =
-                    parse_optional_string(table, "util_libs_dir")?.map(PathBuf::from);
-                let version = parse_optional_string(table, "version")?;
-                let default_platform = parse_optional_string(table, "default_platform")?;
-                let raw_config = table
-                    .get("config")
-                    .ok_or_else(|| ImportError::TypeMismatch {
-                        name: "config".to_string(),
-                        expected: "table",
-                        found: "none",
-                    })?;
+                let kernel = parse_required_table(table, "kernel")?;
+                let tools = parse_required_table(table, "tools")?;
+                let util_libs = parse_required_table(table, "util_libs")?;
+                let raw_config =
+                    table
+                        .get("config")
+                        .ok_or_else(|| ImportError::MissingProperty {
+                            name: "config".to_string(),
+                            expected_type: "table",
+                        })?;
                 let config_table =
                     raw_config
                         .as_table()
@@ -83,46 +67,29 @@ pub(crate) mod raw {
                     config.insert(k.to_owned(), v.clone());
                 }
                 Ok(SeL4 {
-                    kernel_dir,
-                    tools_dir,
-                    util_libs_dir,
-                    version,
-                    default_platform,
+                    kernel,
+                    tools,
+                    util_libs,
                     config,
                 })
             }
 
-            fn parse_optional_string(
-                table: &TomlTable,
+            fn parse_required_table(
+                parent: &TomlTable,
                 key: &str,
-            ) -> Result<Option<String>, ImportError> {
-                if let Some(val) = table.get(key) {
-                    Ok(Some(val.as_str().map(|s| s.to_owned()).ok_or_else(
-                        || ImportError::TypeMismatch {
-                            name: key.to_string(),
-                            expected: "string",
-                            found: val.type_str(),
-                        },
-                    )?))
-                } else {
-                    Ok(None)
-                }
-            }
-
-            fn parse_required_string(table: &TomlTable, key: &str) -> Result<String, ImportError> {
-                if let Some(val) = table.get(key) {
-                    Ok(val.as_str().map(|s| s.to_owned()).ok_or_else(|| {
+            ) -> Result<TomlTable, ImportError> {
+                if let Some(val) = parent.get(key) {
+                    Ok(val.as_table().map(|s| s.to_owned()).ok_or_else(|| {
                         ImportError::TypeMismatch {
                             name: key.to_string(),
-                            expected: "string",
+                            expected: "table",
                             found: val.type_str(),
                         }
                     })?)
                 } else {
-                    Err(ImportError::TypeMismatch {
+                    Err(ImportError::MissingProperty {
                         name: key.to_string(),
-                        expected: "string",
-                        found: "none",
+                        expected_type: "table",
                     })
                 }
             }
@@ -188,10 +155,9 @@ pub(crate) mod raw {
             }
 
             let sel4 = parse_sel4(top.get("sel4").and_then(TomlValue::as_table).ok_or_else(
-                || ImportError::TypeMismatch {
+                || ImportError::MissingProperty {
                     name: "sel4".to_string(),
-                    expected: "table",
-                    found: "none",
+                    expected_type: "table",
                 },
             )?)?;
 
@@ -261,6 +227,91 @@ impl SingleValue {
     }
 }
 
+fn parse_required_string(table: &TomlTable, key: &str) -> Result<String, ImportError> {
+    if let Some(val) = table.get(key) {
+        Ok(val
+            .as_str()
+            .map(|s| s.to_owned())
+            .ok_or_else(|| ImportError::TypeMismatch {
+                name: key.to_string(),
+                expected: "string",
+                found: val.type_str(),
+            })?)
+    } else {
+        Err(ImportError::MissingProperty {
+            name: key.to_string(),
+            expected_type: "string",
+        })
+    }
+}
+
+fn parse_optional_string(table: &TomlTable, key: &str) -> Result<Option<String>, ImportError> {
+    if let Some(val) = table.get(key) {
+        Ok(Some(val.as_str().map(|s| s.to_owned()).ok_or_else(
+            || ImportError::TypeMismatch {
+                name: key.to_string(),
+                expected: "string",
+                found: val.type_str(),
+            },
+        )?))
+    } else {
+        Ok(None)
+    }
+}
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct SeL4Sources {
+    pub kernel: RepoSource,
+    pub tools: RepoSource,
+    pub util_libs: RepoSource,
+}
+
+impl SeL4Sources {
+    fn relative_to(&self, base_dir: Option<&Path>) -> Self {
+        SeL4Sources {
+            kernel: self.kernel.relative_to(base_dir),
+            tools: self.tools.relative_to(base_dir),
+            util_libs: self.util_libs.relative_to(base_dir),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum RepoSource {
+    LocalPath(PathBuf),
+    RemoteGit { url: String, target: GitTarget },
+}
+
+impl RepoSource {
+    fn relative_to(&self, base_dir: Option<&Path>) -> Self {
+        match self {
+            RepoSource::LocalPath(p) => RepoSource::LocalPath(p.relative_to(base_dir)),
+            s @ _ => s.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum GitTarget {
+    Branch(String),
+    Rev(String),
+    Tag(String),
+}
+
+impl GitTarget {
+    pub fn kind(&self) -> &'static str {
+        match self {
+            GitTarget::Branch(_) => "branch",
+            GitTarget::Rev(_) => "rev",
+            GitTarget::Tag(_) => "tag",
+        }
+    }
+    pub fn value(&self) -> &str {
+        match self {
+            GitTarget::Branch(s) | GitTarget::Rev(s) | GitTarget::Tag(s) => s,
+        }
+    }
+}
+
 pub mod full {
     use super::*;
 
@@ -272,8 +323,7 @@ pub mod full {
 
     #[derive(Debug, Clone, PartialEq)]
     pub struct SeL4 {
-        pub source: SeL4Source,
-        pub default_platform: Option<String>,
+        pub sources: SeL4Sources,
         pub config: Config,
     }
 
@@ -292,12 +342,8 @@ pub mod full {
     }
 
     impl SeL4 {
-        pub fn new(source: SeL4Source, default_platform: Option<String>, config: Config) -> Self {
-            SeL4 {
-                source,
-                default_platform,
-                config,
-            }
+        pub fn new(sources: SeL4Sources, config: Config) -> Self {
+            SeL4 { sources, config }
         }
     }
 
@@ -314,34 +360,62 @@ pub mod full {
 
         fn from_str(s: &str) -> Result<Self, Self::Err> {
             let raw::Raw { sel4, build } = s.parse()?;
-
-            let source = match (
-                sel4.kernel_dir,
-                sel4.tools_dir,
-                sel4.util_libs_dir,
-                sel4.version,
-            ) {
-                (Some(kernel_dir), Some(tools_dir), Some(util_libs_dir), None) => {
-                    SeL4Source::LocalDirectories {
-                        kernel_dir,
-                        tools_dir,
-                        util_libs_dir,
-                    }
-                }
-                (None, None, None, Some(version)) => SeL4Source::Version(
-                    parse_version(&version).map_err(|_ve| ImportError::InvalidSeL4Source)?,
-                ),
-                (_, _, _, _) => return Err(ImportError::InvalidSeL4Source),
+            let sources = SeL4Sources {
+                kernel: parse_repo_source(&sel4.kernel)?,
+                tools: parse_repo_source(&sel4.tools)?,
+                util_libs: parse_repo_source(&sel4.util_libs)?,
             };
 
             Ok(Full {
                 sel4: SeL4 {
-                    source,
-                    default_platform: sel4.default_platform,
+                    sources,
                     config: structure_config(sel4.config)?,
                 },
                 build: build.unwrap_or_else(|| BTreeMap::new()),
             })
+        }
+    }
+
+    fn parse_repo_source(table: &TomlTable) -> Result<RepoSource, ImportError> {
+        let path = parse_optional_string(table, "path")?;
+        if let Some(path) = path {
+            if table.len() > 1 {
+                let extra_keys = table
+                    .iter()
+                    .filter_map(|(k, _v)| {
+                        if k != "path" {
+                            Some(k.to_owned())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                return Err(ImportError::UnsupportedProperties { extra_keys });
+            }
+            Ok(RepoSource::LocalPath(PathBuf::from(path)))
+        } else {
+            let url = parse_required_string(table, "git")?;
+            let branch = parse_optional_string(table, "branch")?;
+            let tag = parse_optional_string(table, "tag")?;
+            let rev = parse_optional_string(table, "rev")?;
+            match (branch, tag, rev) {
+                (Some(b), None, None) => Ok(RepoSource::RemoteGit {
+                    url,
+                    target: GitTarget::Branch(b.to_owned()),
+                }),
+                (None, Some(t), None) => Ok(RepoSource::RemoteGit {
+                    url,
+                    target: GitTarget::Tag(t.to_owned()),
+                }),
+                (None, None, Some(r)) => Ok(RepoSource::RemoteGit {
+                    url,
+                    target: GitTarget::Rev(r.to_owned()),
+                }),
+                _ => Err(ImportError::MissingProperty {
+                    name: "branch or tag or rev".to_string(),
+                    expected_type: "string",
+                }),
+            }
         }
     }
 
@@ -371,24 +445,32 @@ pub mod full {
 
     impl Full {
         fn to_toml(&self) -> TomlTable {
-            let mut sel4 = TomlTable::new();
-            match &self.sel4.source {
-                SeL4Source::Version(version) => {
-                    sel4.insert_str("version", format!("{}", version));
-                }
-                SeL4Source::LocalDirectories {
-                    kernel_dir,
-                    tools_dir,
-                    util_libs_dir,
-                } => {
-                    sel4.insert_str("kernel_dir", format!("{}", kernel_dir.display()));
-                    sel4.insert_str("tools_dir", format!("{}", tools_dir.display()));
-                    sel4.insert_str("util_libs_dir", format!("{}", util_libs_dir.display()));
-                }
-            }
+            let mut sel4 = serialize_sel4_sources(&self.sel4.sources);
 
-            if let Some(plat) = &self.sel4.default_platform {
-                sel4.insert_str("default_platform", plat.as_ref());
+            fn serialize_sel4_sources(sources: &SeL4Sources) -> TomlTable {
+                let mut table = TomlTable::new();
+                table.insert_table("kernel", serialize_repo_source(&sources.kernel));
+                table.insert_table("tools", serialize_repo_source(&sources.tools));
+                table.insert_table("util_libs", serialize_repo_source(&sources.util_libs));
+                table
+            }
+            fn serialize_repo_source(source: &RepoSource) -> TomlTable {
+                let mut table = TomlTable::new();
+                match source {
+                    RepoSource::LocalPath(p) => {
+                        table.insert_str("path", format!("{}", p.display()));
+                    }
+                    RepoSource::RemoteGit { url, target } => {
+                        table.insert_str("git", url.as_ref());
+                        match target {
+                            GitTarget::Branch(v) => table.insert_str("branch", v.as_ref()),
+                            GitTarget::Tag(v) => table.insert_str("tag", v.as_ref()),
+                            GitTarget::Rev(v) => table.insert_str("rev", v.as_ref()),
+                        };
+                    }
+                }
+
+                table
             }
 
             fn serialize_config(sel4_config: &Config) -> TomlTable {
@@ -569,7 +651,7 @@ pub mod contextualized {
 
     #[derive(Debug, Clone, PartialEq, Hash)]
     pub struct Contextualized {
-        pub sel4_source: SeL4Source,
+        pub sel4_sources: SeL4Sources,
         pub context: Context,
         pub sel4_config: BTreeMap<String, SingleValue>,
         pub build: Build,
@@ -599,9 +681,9 @@ pub mod contextualized {
     impl Contextualized {
         pub fn from_str(
             source_toml: &str,
-            target: String,
+            target: &str,
             is_debug: bool,
-            platform: Option<String>,
+            platform: &str,
             base_dir: Option<&Path>,
         ) -> Result<Contextualized, ImportError> {
             let f: full::Full = source_toml.parse()?;
@@ -609,28 +691,24 @@ pub mod contextualized {
         }
 
         pub fn from_full(
-            mut source: full::Full,
-            target: String,
+            mut f: full::Full,
+            target: &str,
             is_debug: bool,
-            platform: Option<String>,
+            platform: &str,
             base_dir: Option<&Path>,
         ) -> Result<Contextualized, ImportError> {
-            let platform = platform
-                .or(source.sel4.default_platform)
-                .ok_or_else(|| ImportError::NoPlatformSupplied)?;
             let context = Context {
-                platform: platform.clone(),
-                target,
+                platform: platform.to_owned(),
+                target: target.to_owned(),
                 is_debug,
                 base_dir: base_dir.map(|p| p.to_path_buf()),
             };
 
             let platform_build =
-                source
-                    .build
-                    .remove(&platform)
+                f.build
+                    .remove(platform)
                     .ok_or_else(|| ImportError::NoBuildSupplied {
-                        platform: platform.clone(),
+                        platform: platform.to_owned(),
                         profile: if is_debug { "debug" } else { "release " },
                     })?;
             let build_profile = if is_debug {
@@ -650,7 +728,7 @@ pub mod contextualized {
                 root_task,
             };
 
-            let source_config = source.sel4.config;
+            let source_config = f.sel4.config;
             let mut sel4_config = source_config.shared_config;
             if is_debug {
                 sel4_config.extend(source_config.debug_config)
@@ -665,19 +743,10 @@ pub mod contextualized {
                 sel4_config.extend(platform_config);
             }
 
+            let sources = f.sel4.sources.relative_to(base_dir);
+
             Ok(Contextualized {
-                sel4_source: match source.sel4.source {
-                    SeL4Source::Version(v) => SeL4Source::Version(v),
-                    SeL4Source::LocalDirectories {
-                        kernel_dir,
-                        tools_dir,
-                        util_libs_dir,
-                    } => SeL4Source::LocalDirectories {
-                        kernel_dir: kernel_dir.relative_to(base_dir),
-                        tools_dir: tools_dir.relative_to(base_dir),
-                        util_libs_dir: util_libs_dir.relative_to(base_dir),
-                    },
-                },
+                sel4_sources: sources,
                 context,
                 sel4_config,
                 build,
@@ -703,11 +772,17 @@ pub enum ImportError {
         expected: &'static str,
         found: &'static str,
     },
+    MissingProperty {
+        name: String,
+        expected_type: &'static str,
+    },
     NonSingleValue {
         found: &'static str,
     },
+    UnsupportedProperties {
+        extra_keys: Vec<String>,
+    },
     InvalidSeL4Source,
-    NoPlatformSupplied,
     NoBuildSupplied {
         platform: String,
         profile: &'static str,
@@ -719,8 +794,9 @@ impl Display for ImportError {
         match self {
             ImportError::TomlDeserializeError(s) => f.write_fmt(format_args!("Error deserializing toml: {}", s)),
             ImportError::TypeMismatch { name, expected, found } => f.write_fmt(format_args!("Config toml contained a type mismatch for {}. Found {} when {} was expected", name, found, expected)),
+            ImportError::MissingProperty{  name, expected_type } => f.write_fmt(format_args!("Config toml missing {}, expected to be of type {}", name, expected_type)),
             ImportError::NonSingleValue { found } => f.write_fmt(format_args!("Config toml contained a type problem where a singular value was expected but, {} was found", found)),
-            ImportError::NoPlatformSupplied => f.write_fmt(format_args!("Config contextualization failed because no platform was supplied and no default was available.")),
+            ImportError::UnsupportedProperties { extra_keys } => f.write_fmt(format_args!("Config toml contained superfluous unsupported properties: {:?}.", extra_keys )),
             ImportError::InvalidSeL4Source => f.write_fmt(format_args!("Config toml's [sel4] table must contain either a single `version` property or all of the `kernel_dir`, `tools_dir`, and `util_libs_dir` properties.")),
             ImportError::NoBuildSupplied { platform, profile } => f.write_fmt(format_args!("Config toml must contain a [build.platform.profile] table like [build.{}.{}] but none was supplied.", platform, profile)),
         }
@@ -742,12 +818,11 @@ mod tests {
         fn empty() -> Self {
             full::Full {
                 sel4: full::SeL4 {
-                    source: SeL4Source::LocalDirectories {
-                        kernel_dir: PathBuf::from("."),
-                        tools_dir: PathBuf::from("."),
-                        util_libs_dir: PathBuf::from("."),
+                    sources: SeL4Sources {
+                        kernel: RepoSource::LocalPath(PathBuf::from(".")),
+                        tools: RepoSource::LocalPath(PathBuf::from(".")),
+                        util_libs: RepoSource::LocalPath(PathBuf::from(".")),
                     },
-                    default_platform: None,
                     config: Default::default(),
                 },
                 build: Default::default(),
@@ -758,76 +833,19 @@ mod tests {
     #[test]
     fn default_content_is_valid() {
         let f: full::Full = get_default_config();
-
         assert_eq!(
-            SeL4Source::Version(SemVersion {
-                major: 10,
-                minor: 1,
-                patch: 1,
-                pre: vec![],
-                build: vec![],
-            }),
-            f.sel4.source
+            RepoSource::RemoteGit {
+                url: "https://github.com/seL4/seL4".to_string(),
+                target: GitTarget::Tag("10.1.1".to_string())
+            },
+            f.sel4.sources.kernel
         )
-    }
-
-    #[test]
-    fn platform_required_for_contextualization() {
-        let f = full::Full::empty();
-        assert_eq!(&None, &f.sel4.default_platform);
-        match contextualized::Contextualized::from_full(f, "target".to_owned(), true, None, None) {
-            Ok(_) => panic!("Expected an Err about missing platform"),
-            Err(e) => match e {
-                ImportError::NoPlatformSupplied => (), // All according to plan
-                _ => panic!("Unexpected Err kind"),
-            },
-        }
-    }
-
-    #[test]
-    fn can_use_default_platform_contextualization() {
-        let mut f = full::Full::empty();
-        let expected = "pc99".to_owned();
-        f.sel4.default_platform = Some(expected.clone());
-        f.build.insert(
-            expected.clone(),
-            full::PlatformBuild {
-                cross_compiler_prefix: None,
-                toolchain_dir: None,
-                debug_build_profile: Some(full::PlatformBuildProfile {
-                    make_root_task: Some("cmake".to_string()),
-                    root_task_image: PathBuf::from("over_here"),
-                }),
-                release_build_profile: None,
-            },
-        );
-        let c = contextualized::Contextualized::from_full(f, "target".to_owned(), true, None, None)
-            .unwrap();
-        assert_eq!(expected, c.context.platform);
-        assert_eq!(true, c.context.is_debug);
-        assert_eq!("target".to_owned(), c.context.target);
-        assert_eq!(
-            "cmake",
-            c.build
-                .root_task
-                .as_ref()
-                .unwrap()
-                .make_command
-                .as_ref()
-                .unwrap()
-        );
-        assert_eq!(
-            PathBuf::from("over_here"),
-            c.build.root_task.as_ref().unwrap().image_path
-        );
     }
 
     #[test]
     fn override_default_platform_contextualization() {
         let mut f = full::Full::empty();
         let expected = "sabre".to_owned();
-        let default = "pc99".to_owned();
-        f.sel4.default_platform = Some(default.clone());
         f.build.insert(
             expected.clone(),
             full::PlatformBuild {
@@ -840,14 +858,8 @@ mod tests {
                 }),
             },
         );
-        let c = contextualized::Contextualized::from_full(
-            f,
-            "target".to_owned(),
-            false,
-            Some(expected.clone()),
-            None,
-        )
-        .unwrap();
+        let c =
+            contextualized::Contextualized::from_full(f, "target", false, &expected, None).unwrap();
         assert_eq!(expected, c.context.platform);
         assert_eq!(false, c.context.is_debug);
         assert_eq!("target".to_owned(), c.context.target);

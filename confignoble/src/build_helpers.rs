@@ -12,7 +12,7 @@ pub struct BuildEnv {
     pub out_dir: PathBuf,
     pub profile: BuildProfile,
     pub sel4_config_path: Option<PathBuf>,
-    pub sel4_platform: Option<String>,
+    pub sel4_platform: String,
 }
 
 pub enum BuildProfile {
@@ -65,7 +65,18 @@ impl BuildEnv {
                 _ => panic!("Unexpected value for PROFILE: {}", raw_profile),
             },
             sel4_config_path: env::var("SEL4_CONFIG_PATH").ok().map(PathBuf::from),
-            sel4_platform: env::var("SEL4_PLATFORM").ok(),
+            sel4_platform: env::var("SEL4_PLATFORM").unwrap_or_else(|_| {
+                let host = env::var("HOST").expect("Could not get HOST env-var as fallback to determine a default host platform");
+                if let Some(arch_bit) = host.split("-").next() {
+                    match arch_bit.to_lowercase().as_ref() {
+                        "arm" | "armv7" | "aarch32" | "aarch64" => "sabre".to_owned(),
+                        "x86" | "x86_64" | "ia32"=> "pc99".to_owned(),
+                        _ => panic!("No SEL4_PLATFORM was set and could not determine a fallback platform from the HOST triple, {}", host),
+                    }
+                } else {
+                    panic!("HOST env-var was expected to be a target triple, but instead contained: {}", host);
+                }
+            }),
         }
     }
 }
@@ -108,9 +119,9 @@ pub fn load_config_from_env_or_default() -> model::contextualized::Contextualize
 
     model::contextualized::Contextualized::from_full(
         full_config,
-        cargo_cfg_target_arch.to_owned(),
+        &cargo_cfg_target_arch,
         profile.is_debug(),
-        sel4_platform,
+        &sel4_platform,
         config_dir.as_ref().map(|pb| pb.as_path()),
     )
     .expect("Error resolving config file")

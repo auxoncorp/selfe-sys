@@ -10,7 +10,7 @@ use bindgen::Builder;
 extern crate confignoble;
 use confignoble::build_helpers::*;
 use confignoble::compilation::{
-    build_sel4, resolve_sel4_source, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome,
+    build_sel4, resolve_sel4_sources, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome,
 };
 
 extern crate proc_macro2;
@@ -458,7 +458,7 @@ fn main() {
         kernel_dir,
         tools_dir,
         util_libs_dir,
-    } = resolve_sel4_source(&config.sel4_source, &out_dir.join("sel4_source"))
+    } = resolve_sel4_sources(&config.sel4_sources, &out_dir.join("sel4_source"))
         .expect("resolve sel4 source");
 
     let build_dir = if let SeL4BuildOutcome::StaticLib { build_dir } = build_sel4(

@@ -6,4 +6,3 @@ edition = "2018"
 
 [dependencies]
 toml = "0.5"
-semver-parser = "0.9"

@@ -15,13 +15,6 @@ root_task_image = 'debug_image'
 [build.some_arbitrary_platform.release]
 make_root_task = 'cmake release'
 root_task_image = 'release_image'
-
-[sel4]
-default_platform = 'some_arbitrary_platform'
-kernel_dir = './deps/seL4'
-tools_dir = './deps/seL4_tools'
-util_libs_dir = './deps/util_libs'
-
 [sel4.config]
 KernelRetypeFanOutLimit = 256
 
@@ -44,6 +37,15 @@ SomeOtherKey = 'hi'
 
 [sel4.config.some_arbitrary_platform]
 SomeOtherKey = 'aloha'
+
+[sel4.kernel]
+path = './deps/seL4'
+
+[sel4.tools]
+path = './deps/seL4_tools'
+
+[sel4.util_libs]
+path = './deps/util_libs'
 "#;
 
 #[test]
@@ -57,16 +59,12 @@ fn reads_from_external_default_file_okay() {
 fn full_parse_happy_path() {
     let f: full::Full = EXAMPLE.parse().expect("could not read toml to full");
     assert_eq!(
-        SeL4Source::LocalDirectories {
-            kernel_dir: PathBuf::from("./deps/seL4"),
-            tools_dir: PathBuf::from("./deps/seL4_tools"),
-            util_libs_dir: PathBuf::from("./deps/util_libs")
+        SeL4Sources {
+            kernel: RepoSource::LocalPath(PathBuf::from("./deps/seL4")),
+            tools: RepoSource::LocalPath(PathBuf::from("./deps/seL4_tools")),
+            util_libs: RepoSource::LocalPath(PathBuf::from("./deps/util_libs"))
         },
-        f.sel4.source
-    );
-    assert_eq!(
-        Some("some_arbitrary_platform".to_owned()),
-        f.sel4.default_platform
+        f.sel4.sources
     );
     assert_eq!(1, f.sel4.config.shared_config.len());
     let shared_retype = f
@@ -110,44 +108,42 @@ fn full_parse_happy_path() {
         arb_key_some_arbitrary_platform
     );
 
-    let resolved_some_arbitrary_platform_default =
-        contextualized::Contextualized::from_full(f.clone(), "arm32".to_owned(), true, None, None)
-            .unwrap();
-    let resolved_sabre = contextualized::Contextualized::from_full(
+    let resolved_some_arbitrary_platform_default = contextualized::Contextualized::from_full(
         f.clone(),
-        "arm32".to_owned(),
+        "arm32",
         true,
-        Some("sabre".to_owned()),
+        "some_arbitrary_platform",
         None,
     )
     .unwrap();
+
+    let resolved_sabre =
+        contextualized::Contextualized::from_full(f.clone(), "arm32", true, "sabre", None).unwrap();
     assert_ne!(resolved_some_arbitrary_platform_default, resolved_sabre);
 }
 
 #[test]
 fn round_trip() {
-    let f: full::Full = EXAMPLE.parse().expect("could not read toml");
-    let serialized = f.to_toml_string().expect("could not serialize to toml");
+    let f_alpha: full::Full = EXAMPLE.parse().expect("could not read toml");
+    let serialized = f_alpha
+        .to_toml_string()
+        .expect("could not serialize to toml");
+    let f_beta: full::Full = serialized.parse().expect("could not read serialized toml");
+    assert_eq!(f_alpha, f_beta);
     assert_eq!(EXAMPLE, serialized);
 }
 
 #[test]
 fn happy_path_straight_to_contextualized() {
-    let f = contextualized::Contextualized::from_str(
-        EXAMPLE,
-        "arm32".to_owned(),
-        true,
-        Some("sabre".to_owned()),
-        None,
-    )
-    .unwrap();
+    let f =
+        contextualized::Contextualized::from_str(EXAMPLE, "arm32", true, "sabre", None).unwrap();
     assert_eq!(
-        SeL4Source::LocalDirectories {
-            kernel_dir: PathBuf::from("./deps/seL4"),
-            tools_dir: PathBuf::from("./deps/seL4_tools"),
-            util_libs_dir: PathBuf::from("./deps/util_libs")
+        SeL4Sources {
+            kernel: RepoSource::LocalPath(PathBuf::from("./deps/seL4")),
+            tools: RepoSource::LocalPath(PathBuf::from("./deps/seL4_tools")),
+            util_libs: RepoSource::LocalPath(PathBuf::from("./deps/util_libs"))
         },
-        f.sel4_source
+        f.sel4_sources
     );
     assert_eq!("arm32".to_owned(), f.context.target);
     assert_eq!("sabre".to_owned(), f.context.platform);
@@ -173,46 +169,4 @@ fn happy_path_straight_to_contextualized() {
         &SingleValue::String("hi".to_owned()),
         f.sel4_config.get("SomeOtherKey").unwrap()
     );
-}
-
-const VERSION_EXAMPLE: &str = r#"[sel4]
-default_platform = 'pc99'
-version = '10.1.0'
-
-[sel4.config]
-KernelRetypeFanOutLimit = 256
-
-[sel4.config.debug]
-KernelDebugBuild = true
-KernelPrinting = true
-
-[sel4.config.pc99]
-
-[sel4.config.release]
-KernelDebugBuild = false
-KernelPrinting = false
-
-[sel4.config.x86_64]
-KernelArch = 'x86'
-KernelX86Sel4Arch = 'x86_64'
-"#;
-
-#[test]
-fn happy_path_versioned() {
-    let f: full::Full = VERSION_EXAMPLE
-        .parse()
-        .expect("could not read toml to full");
-    assert_eq!(SeL4Source::Version(simple_version(10, 1, 0)), f.sel4.source);
-    let serialized = f.to_toml_string().expect("could not serialize to toml");
-    assert_eq!(VERSION_EXAMPLE, serialized);
-}
-
-fn simple_version(major: u64, minor: u64, patch: u64) -> semver_parser::version::Version {
-    semver_parser::version::Version {
-        major,
-        minor,
-        patch,
-        pre: vec![],
-        build: vec![],
-    }
 }
