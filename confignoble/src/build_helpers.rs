@@ -53,8 +53,10 @@ impl BuildEnv {
             env::var(var).expect(&format!("{} must be set", var))
         }
         let raw_profile = get_env("PROFILE");
+        let cargo_cfg_target_arch = get_env("CARGO_CFG_TARGET_ARCH");
+
         BuildEnv {
-            cargo_cfg_target_arch: get_env("CARGO_CFG_TARGET_ARCH"),
+            cargo_cfg_target_arch: cargo_cfg_target_arch.clone(),
             cargo_cfg_target_pointer_width: get_env("CARGO_CFG_TARGET_POINTER_WIDTH")
                 .parse()
                 .expect("Could not parse CARGO_CFG_TARGET_POINTER_WIDTH as an unsigned integer"),
@@ -66,16 +68,14 @@ impl BuildEnv {
             },
             sel4_config_path: env::var("SEL4_CONFIG_PATH").ok().map(PathBuf::from),
             sel4_platform: env::var("SEL4_PLATFORM").unwrap_or_else(|_| {
-                let host = env::var("HOST").expect("Could not get HOST env-var as fallback to determine a default host platform");
-                if let Some(arch_bit) = host.split("-").next() {
-                    match arch_bit.to_lowercase().as_ref() {
-                        "arm" | "armv7" | "aarch32" | "aarch64" => "sabre".to_owned(),
-                        "x86" | "x86_64" | "ia32"=> "pc99".to_owned(),
-                        _ => panic!("No SEL4_PLATFORM was set and could not determine a fallback platform from the HOST triple, {}", host),
-                    }
-                } else {
-                    panic!("HOST env-var was expected to be a target triple, but instead contained: {}", host);
-                }
+                let auto_val = match cargo_cfg_target_arch.as_ref() {
+                    "arm" | "armv7" | "aarch32" | "aarch64" => "sabre".to_owned(),
+                    "x86" | "x86_64" | "ia32"=> "pc99".to_owned(),
+                    _ => panic!("No SEL4_PLATFORM was set and could not determine a fallback platform from the arch of the target triple, {}", cargo_cfg_target_arch),
+                };
+                println!("cargo:warning=Using auto-detected value for SEL4_PLATFORM: '{}'", auto_val);
+                auto_val
+
             }),
         }
     }
