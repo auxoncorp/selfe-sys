@@ -12,6 +12,7 @@ use confignoble::build_helpers::*;
 use confignoble::compilation::{
     build_sel4, resolve_sel4_sources, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome,
 };
+use confignoble::model::{self, Arch, Sel4Arch};
 
 extern crate proc_macro2;
 use proc_macro2::{Ident, Span, TokenStream};
@@ -51,9 +52,9 @@ const KERNEL_INCLUDE_DIRS: &'static [&'static str] = &[
     "libsel4/mode_include/$PTR_WIDTH$",
 ];
 
-fn expand_include_dir(d: &str, arch: &str, sel4_arch: &str, ptr_width: usize) -> String {
-    d.replace("$ARCH$", arch)
-        .replace("$SEL4_ARCH$", sel4_arch)
+fn expand_include_dir(d: &str, arch: Arch, sel4_arch: Sel4Arch, ptr_width: usize) -> String {
+    d.replace("$ARCH$", &arch.to_string())
+        .replace("$SEL4_ARCH$", &sel4_arch.to_string())
         .replace("$PTR_WIDTH$", &format!("{}", ptr_width))
 }
 
@@ -68,8 +69,8 @@ fn gen_bindings(
     out_dir: &Path,
     kernel_path: &Path,
     libsel4_build_path: &Path,
-    arch: &str,
-    sel4_arch: &str,
+    arch: model::Arch,
+    sel4_arch: model::Sel4Arch,
     ptr_width: usize,
 ) {
     println!("cargo:rerun-if-file-changed=src/bindgen_wrapper.h");
@@ -106,35 +107,6 @@ fn gen_bindings(
     bindings
         .write_to_file(PathBuf::from(out_dir).join("bindings.rs"))
         .expect("couldn't write bindings");
-}
-
-// TODO arm_hyp
-fn rust_arch_to_sel4_arch(arch: &str) -> String {
-    match arch {
-        "arm" => "arm".to_owned(),
-        "armv7" => "arm".to_owned(),
-        "aarch32" => "arm".to_owned(),
-        "aarch64" => "arm".to_owned(),
-        "i386" => "x86".to_owned(),
-        "i586" => "x86".to_owned(),
-        "i686" => "x86".to_owned(),
-        "x86_64" => "x86".to_owned(),
-        _ => panic!("Unknown arch"),
-    }
-}
-
-fn rust_arch_to_arch(arch: &str) -> String {
-    match arch {
-        "arm" => "aarch32".to_owned(),
-        "armv7" => "aarch32".to_owned(),
-        "aarch32" => "aarch32".to_owned(),
-        "aarch64" => "aarch64".to_owned(),
-        "i386" => "ia32".to_owned(),
-        "i586" => "ia32".to_owned(),
-        "i686" => "ia32".to_owned(),
-        "x86_64" => "x86_64".to_owned(),
-        _ => panic!("Unknown arch"),
-    }
 }
 
 #[derive(Debug)]
@@ -438,7 +410,6 @@ fn gen_tests(out_dir: &Path) {
 fn main() {
     BuildEnv::request_reruns();
     let BuildEnv {
-        cargo_cfg_target_arch,
         cargo_cfg_target_pointer_width,
         out_dir,
         ..
@@ -451,8 +422,6 @@ fn main() {
 
     let config = load_config_from_env_or_default();
     config.print_boolean_feature_flags();
-    let sel4_arch = rust_arch_to_sel4_arch(&cargo_cfg_target_arch);
-    let arch = rust_arch_to_arch(&cargo_cfg_target_arch);
 
     let ResolvedSeL4Source {
         kernel_dir,
@@ -484,8 +453,8 @@ fn main() {
         &out_dir,
         &kernel_dir,
         &build_dir,
-        &sel4_arch,
-        &arch,
+        config.context.arch,
+        config.context.sel4_arch,
         cargo_cfg_target_pointer_width,
     );
 }

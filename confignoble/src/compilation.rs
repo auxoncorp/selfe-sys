@@ -1,4 +1,4 @@
-use crate::model;
+use crate::model::{self, Arch};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::BTreeMap;
 use std::fs;
@@ -277,8 +277,8 @@ pub fn build_sel4(
         )
     });
     match build_mode {
-        SeL4BuildMode::Kernel => match config.context.target.as_ref() {
-            "x86_64" | "x86" => SeL4BuildOutcome::Kernel {
+        SeL4BuildMode::Kernel => match config.context.arch {
+            Arch::X86 => SeL4BuildOutcome::Kernel {
                 build_dir: build_dir.clone(),
                 kernel_path: build_dir
                     .join("images")
@@ -289,7 +289,7 @@ pub fn build_sel4(
                         .join(format!("root_task-image-{}-{}", sel4_arch, kernel_platform)),
                 ),
             },
-            "arm" | "aarch32" | "arm32" | "aarch64" => SeL4BuildOutcome::Kernel {
+            Arch::Arm => SeL4BuildOutcome::Kernel {
                 build_dir: build_dir.clone(),
                 kernel_path: build_dir
                     .join("images")

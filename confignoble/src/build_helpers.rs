@@ -1,7 +1,7 @@
 //! Functions that can be called from build.rs, for when libraries need access
 //! to the sel4 configuration
 
-use crate::model;
+use crate::model::{self, Arch, Platform, RustArch, Sel4Arch};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::{env, fs};
@@ -12,7 +12,9 @@ pub struct BuildEnv {
     pub out_dir: PathBuf,
     pub profile: BuildProfile,
     pub sel4_config_path: Option<PathBuf>,
-    pub sel4_platform: String,
+    pub sel4_override_arch: Option<String>,
+    pub sel4_override_sel4_arch: Option<String>,
+    pub sel4_platform: Option<String>,
 }
 
 pub enum BuildProfile {
@@ -39,6 +41,8 @@ impl BuildEnv {
             "PROFILE",
             "SEL4_CONFIG_PATH",
             "SEL4_PLATFORM",
+            "SEL4_OVERRIDE_SEL4_ARCH",
+            "SEL4_OVERRIDE_ARCH",
         ]
         .iter()
         {
@@ -67,16 +71,9 @@ impl BuildEnv {
                 _ => panic!("Unexpected value for PROFILE: {}", raw_profile),
             },
             sel4_config_path: env::var("SEL4_CONFIG_PATH").ok().map(PathBuf::from),
-            sel4_platform: env::var("SEL4_PLATFORM").unwrap_or_else(|_| {
-                let auto_val = match cargo_cfg_target_arch.as_ref() {
-                    "arm" | "armv7" | "aarch32" | "aarch64" => "sabre".to_owned(),
-                    "x86" | "x86_64" | "ia32"=> "pc99".to_owned(),
-                    _ => panic!("No SEL4_PLATFORM was set and could not determine a fallback platform from the arch of the target triple, {}", cargo_cfg_target_arch),
-                };
-                println!("cargo:warning=Using auto-detected value for SEL4_PLATFORM: '{}'", auto_val);
-                auto_val
-
-            }),
+            sel4_override_arch: env::var("SEL4_OVERRIDE_ARCH").ok(),
+            sel4_override_sel4_arch: env::var("SEL4_OVERRIDE_SEL4_ARCH").ok(),
+            sel4_platform: env::var("SEL4_PLATFORM").ok(),
         }
     }
 }
@@ -87,6 +84,8 @@ pub fn load_config_from_env_or_default() -> model::contextualized::Contextualize
         cargo_cfg_target_arch,
         profile,
         sel4_config_path,
+        sel4_override_arch,
+        sel4_override_sel4_arch,
         sel4_platform,
         ..
     } = BuildEnv::from_env_vars();
@@ -117,11 +116,41 @@ pub fn load_config_from_env_or_default() -> model::contextualized::Contextualize
             (model::get_default_config(), None)
         });
 
+    let rust_arch = RustArch::from_str(&cargo_cfg_target_arch);
+
+    let sel4_arch = match sel4_override_sel4_arch {
+        Some(s) => Sel4Arch::from_str(&s)
+            .expect("Can't parse SEL4_OVERRIDE_SEL4_ARCH as a known sel4_arch value"),
+        None => Sel4Arch::from_rust_arch(rust_arch.unwrap())
+            .expect("Can't find a sel4_arch for the current cargo target"),
+    };
+
+    let arch = match sel4_override_arch {
+        Some(s) => {
+            Arch::from_str(&s).expect("Can't parse SEL4_OVERRIDE_ARCH as a known arch value")
+        }
+        None => Arch::from_sel4_arch(sel4_arch),
+    };
+
+    let platform = Platform(sel4_platform.unwrap_or_else(|| {
+        let auto_val = match arch {
+            Arch::Arm => "sabre".to_owned(),
+            Arch::X86 => "pc99".to_owned(),
+            Arch::Riscv => panic!("Can't choose a default platform for riscv"),
+        };
+        println!(
+            "cargo:warning=Using auto-detected value for SEL4_PLATFORM: '{}'",
+            auto_val
+        );
+        auto_val
+    }));
+
     model::contextualized::Contextualized::from_full(
         full_config,
-        &cargo_cfg_target_arch,
+        arch,
+        sel4_arch,
         profile.is_debug(),
-        &sel4_platform,
+        platform,
         config_dir.as_ref().map(|pb| pb.as_path()),
     )
     .expect("Error resolving config file")

@@ -4,12 +4,16 @@ tools = { git = "https://github.com/seL4/seL4_tools" , branch = "10.1.x-compatib
 util_libs  = { git = "https://github.com/seL4/util_libs" , branch = "10.1.x-compatible" }
 
 
-[sel4.config.x86_64]
+[sel4.config.x86]
 KernelArch = 'x86'
+
+# sel4_arch=x86_64
+[sel4.config.x86_64]
 KernelX86Sel4Arch = 'x86_64'
 KernelSel4Arch = 'x86_64'
 Kernel64 = true
 
+# platform=pc99
 [sel4.config.pc99]
 KernelX86Platform = 'pc99'
 KernelX86MicroArch = 'nehalem'
@@ -20,11 +24,15 @@ KernelX86IBPBOnContextSwitch = false
 KernelX86IBRSMode = 'ibrs_none'
 KernelX86RSBOnContextSwitch = false
 
+# arch=arm
 [sel4.config.arm]
 KernelArch = 'arm'
+
+[sel4.config.aarch32]
 KernelArmSel4Arch = 'aarch32'
 KernelSel4Arch = 'aarch32'
 
+#platform=sabre
 [sel4.config.sabre]
 KernelARMPlatform = 'imx6'
 KernelHaveFPU = true
