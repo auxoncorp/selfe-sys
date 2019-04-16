@@ -1,51 +1,3 @@
-[sel4]
-kernel = { git = "https://github.com/seL4/seL4" , tag = "10.1.1" }
-tools = { git = "https://github.com/seL4/seL4_tools" , branch = "10.1.x-compatible" }
-util_libs  = { git = "https://github.com/seL4/util_libs" , branch = "10.1.x-compatible" }
-
-
-[sel4.config.x86]
-KernelArch = 'x86'
-
-# sel4_arch=x86_64
-[sel4.config.x86_64]
-KernelX86Sel4Arch = 'x86_64'
-KernelSel4Arch = 'x86_64'
-Kernel64 = true
-
-# platform=pc99
-[sel4.config.pc99]
-KernelX86Platform = 'pc99'
-KernelX86MicroArch = 'nehalem'
-LibPlatSupportX86ConsoleDevice = 'com1'
-KernelVTX = false
-KernelX86DangerousMSR = false
-KernelX86IBPBOnContextSwitch = false
-KernelX86IBRSMode = 'ibrs_none'
-KernelX86RSBOnContextSwitch = false
-
-# arch=arm
-[sel4.config.arm]
-KernelArch = 'arm'
-
-[sel4.config.aarch32]
-KernelArmSel4Arch = 'aarch32'
-KernelSel4Arch = 'aarch32'
-
-#platform=sabre
-[sel4.config.sabre]
-KernelARMPlatform = 'imx6'
-KernelHaveFPU = true
-
-[sel4.config.debug]
-KernelPrinting = true
-KernelDebugBuild = true
-
-[sel4.config.release]
-KernelPrinting = false
-KernelDebugBuild = false
-KernelOptimisation = '-O2'
-
 ### PC99 (x64)
 [build.pc99]
 cross_compiler_prefix = ""
@@ -57,7 +9,6 @@ root_task_image = "target/x86_64-unknown-linux-gnu/debug/example"
 [build.pc99.release]
 make_root_task = "cargo xbuild --target=x86_64-unknown-linux-gnu --release"
 root_task_image = "target/x86_64-unknown-linux-gnu/release/example"
-
 
 ### Sabre (ARMv7 imx6)
 [build.sabre]
@@ -72,10 +23,62 @@ make_root_task = "cargo xbuild --target=armv7-unknown-linux-gnueabihf --release"
 root_task_image = "target/armv7-unknown-linux-gnueabihf/release/example"
 
 
+[sel4]
+kernel = { git = "https://github.com/seL4/seL4" , tag = "10.1.1" }
+tools = { git = "https://github.com/seL4/seL4_tools" , branch = "10.1.x-compatible" }
+util_libs  = { git = "https://github.com/seL4/util_libs" , branch = "10.1.x-compatible" }
+
+### arch
+
+[sel4.config.x86]
+KernelArch = 'x86'
+
+[sel4.config.arm]
+KernelArch = 'arm'
+KernelIPCBufferLocation = 'threadID_register'
+
+### sel4_arch
+
+[sel4.config.x86_64]
+KernelSel4Arch = 'x86_64'
+KernelX86Sel4Arch = 'x86_64'
+
+[sel4.config.aarch32]
+KernelSel4Arch = 'aarch32'
+KernelArmSel4Arch = 'aarch32'
+
+### platform
+
+[sel4.config.pc99]
+KernelX86Platform = 'pc99'
+KernelX86MicroArch = 'nehalem'
+LibPlatSupportX86ConsoleDevice = 'com1'
+KernelVTX = false
+KernelX86DangerousMSR = false
+KernelX86IBPBOnContextSwitch = false
+KernelX86IBRSMode = 'ibrs_none'
+KernelX86RSBOnContextSwitch = false
+
+
+[sel4.config.sabre]
+KernelARMPlatform = 'imx6'
+KernelHaveFPU = true
+
+### Build mode
+
+[sel4.config.debug]
+KernelPrinting = true
+KernelDebugBuild = true
+
+[sel4.config.release]
+KernelPrinting = false
+KernelDebugBuild = false
+KernelOptimisation = '-O2'
+
+
 [sel4.config]
 KernelColourPrinting = true
 KernelUserStackTraceLength = 16
-BuildWithCommonSimulationSettings = true
 KernelVerificationBuild = false
 KernelBenchmarks = 'none'
 KernelFastpath = true
@@ -84,8 +87,6 @@ KernelNumDomains = 1
 HardwareDebugAPI = false
 KernelFWholeProgram = false
 KernelResetChunkBits = 8
-LibSel4DebugAllocBufferEntries = 0
-LibSel4DebugFunctionInstrumentation = 'none'
 KernelNumPriorities = 256
 KernelStackBits = 12
 KernelTimeSlice = 5
@@ -95,7 +96,6 @@ KernelRetypeFanOutLimit = 16384
 KernelRootCNodeSizeBits = 19
 KernelMaxNumBootinfoUntypedCaps = 230
 KernelSupportPCID = false
-KernelCacheLnSz = 64
 KernelDebugDisablePrefetchers = false
 KernelExportPMCUser = false
 KernelFPU = 'FXSAVE'
@@ -115,4 +115,3 @@ KernelSkimWindow = true
 KernelSyscall = 'syscall'
 KernelXSaveSize = 576
 LinkPageSize = 4096
-UserLinkerGCSections = false
