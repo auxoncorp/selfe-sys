@@ -38,4 +38,3 @@ KernelDebugBuild = false
 
 [build.sabre]
 cross_compiler_prefix = "arm-linux-gnueabihf-"
-

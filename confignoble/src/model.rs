@@ -236,6 +236,7 @@ pub(crate) mod raw {
     pub(crate) struct Raw {
         pub(crate) sel4: SeL4,
         pub(crate) build: Option<BTreeMap<String, PlatformBuild>>,
+        pub(crate) metadata: BTreeMap<String, TomlValue>,
     }
 
     pub(crate) struct SeL4 {
@@ -260,24 +261,20 @@ pub(crate) mod raw {
                 let kernel = parse_required_table(table, "kernel")?;
                 let tools = parse_required_table(table, "tools")?;
                 let util_libs = parse_required_table(table, "util_libs")?;
-                let raw_config =
-                    table
-                        .get("config")
-                        .ok_or_else(|| ImportError::MissingProperty {
-                            name: "config".to_string(),
-                            expected_type: "table",
-                        })?;
-                let config_table =
-                    raw_config
-                        .as_table()
-                        .ok_or_else(|| ImportError::TypeMismatch {
-                            name: "config".to_string(),
-                            expected: "table",
-                            found: raw_config.type_str(),
-                        })?;
+
                 let mut config = BTreeMap::new();
-                for (k, v) in config_table.iter() {
-                    config.insert(k.to_owned(), v.clone());
+                if let Some(config_val) = table.get("config") {
+                    let raw_config =
+                        config_val
+                            .as_table()
+                            .ok_or_else(|| ImportError::TypeMismatch {
+                                name: "config".to_string(),
+                                expected: "table",
+                                found: config_val.type_str(),
+                            })?;
+                    for (k, v) in raw_config.iter() {
+                        config.insert(k.to_owned(), v.clone());
+                    }
                 }
                 Ok(SeL4 {
                     kernel,
@@ -388,7 +385,26 @@ pub(crate) mod raw {
                 None
             };
 
-            Ok(Raw { sel4, build })
+            let mut metadata = BTreeMap::new();
+            if let Some(metadata_val) = top.get("metadata") {
+                let raw_metadata =
+                    metadata_val
+                        .as_table()
+                        .ok_or_else(|| ImportError::TypeMismatch {
+                            name: "metadata".to_string(),
+                            expected: "table",
+                            found: metadata_val.type_str(),
+                        })?;
+                for (k, v) in raw_metadata.iter() {
+                    metadata.insert(k.to_owned(), v.clone());
+                }
+            }
+
+            Ok(Raw {
+                sel4,
+                build,
+                metadata,
+            })
         }
     }
 }
@@ -401,11 +417,11 @@ pub enum SingleValue {
 }
 
 impl SingleValue {
-    pub fn from_toml(t: TomlValue) -> Result<SingleValue, ImportError> {
+    pub fn from_toml(t: &TomlValue) -> Result<SingleValue, ImportError> {
         match t {
-            TomlValue::String(s) => Ok(SingleValue::String(s)),
-            TomlValue::Integer(i) => Ok(SingleValue::Integer(i)),
-            TomlValue::Boolean(b) => Ok(SingleValue::Boolean(b)),
+            TomlValue::String(s) => Ok(SingleValue::String(s.clone())),
+            TomlValue::Integer(i) => Ok(SingleValue::Integer(*i)),
+            TomlValue::Boolean(b) => Ok(SingleValue::Boolean(*b)),
             TomlValue::Float(_)
             | TomlValue::Table(_)
             | TomlValue::Datetime(_)
@@ -423,7 +439,7 @@ impl SingleValue {
         }
     }
 
-    fn single_pair((k, v): (String, TomlValue)) -> Result<(String, SingleValue), ImportError> {
+    fn single_pair((k, v): (&String, &TomlValue)) -> Result<(String, SingleValue), ImportError> {
         let sv = SingleValue::from_toml(v).map_err(|e| match e {
             ImportError::NonSingleValue { found } => ImportError::TypeMismatch {
                 name: k.clone(),
@@ -432,7 +448,7 @@ impl SingleValue {
             },
             _ => e,
         })?;
-        Ok((k, sv))
+        Ok((k.clone(), sv))
     }
 
     fn toml_pair((k, v): (&String, &SingleValue)) -> (String, TomlValue) {
@@ -527,11 +543,13 @@ impl GitTarget {
 
 pub mod full {
     use super::*;
+    use std::collections::btree_map::BTreeMap;
 
     #[derive(Debug, Clone, PartialEq)]
     pub struct Full {
         pub sel4: SeL4,
         pub build: BTreeMap<String, PlatformBuild>,
+        pub metadata: Metadata,
     }
 
     #[derive(Debug, Clone, PartialEq)]
@@ -560,19 +578,29 @@ pub mod full {
         }
     }
 
+    pub type Config = PropertiesTree;
+    pub type Metadata = PropertiesTree;
+
+    /// A repeated structure that includes common/shared properties,
+    /// two optional debug and release sets of properties
+    /// and a named bag of bags of properties.
     #[derive(Debug, Default, Clone, PartialEq)]
-    pub struct Config {
-        pub shared_config: BTreeMap<String, SingleValue>,
-        pub debug_config: BTreeMap<String, SingleValue>,
-        pub release_config: BTreeMap<String, SingleValue>,
-        pub contextual_config: BTreeMap<String, BTreeMap<String, SingleValue>>,
+    pub struct PropertiesTree {
+        pub shared: BTreeMap<String, SingleValue>,
+        pub debug: BTreeMap<String, SingleValue>,
+        pub release: BTreeMap<String, SingleValue>,
+        pub contextual: BTreeMap<String, BTreeMap<String, SingleValue>>,
     }
 
     impl std::str::FromStr for Full {
         type Err = ImportError;
 
         fn from_str(s: &str) -> Result<Self, Self::Err> {
-            let raw::Raw { sel4, build } = s.parse()?;
+            let raw::Raw {
+                sel4,
+                build,
+                metadata,
+            } = s.parse()?;
             let sources = SeL4Sources {
                 kernel: parse_repo_source(&sel4.kernel)?,
                 tools: parse_repo_source(&sel4.tools)?,
@@ -582,9 +610,10 @@ pub mod full {
             Ok(Full {
                 sel4: SeL4 {
                     sources,
-                    config: structure_config(sel4.config)?,
+                    config: structure_property_tree(sel4.config)?,
                 },
                 build: build.unwrap_or_else(|| BTreeMap::new()),
+                metadata: structure_property_tree(metadata)?,
             })
         }
     }
@@ -686,35 +715,28 @@ pub mod full {
                 table
             }
 
-            fn serialize_config(sel4_config: &Config) -> TomlTable {
-                let mut config = TomlTable::new();
-                config.extend(sel4_config.shared_config.iter().map(SingleValue::toml_pair));
-                if !sel4_config.debug_config.is_empty() {
-                    config.insert_table(
+            fn serialize_properties_tree(source: &PropertiesTree) -> TomlTable {
+                let mut properties = TomlTable::new();
+                properties.extend(source.shared.iter().map(SingleValue::toml_pair));
+                if !source.debug.is_empty() {
+                    properties.insert_table(
                         "debug",
-                        sel4_config
-                            .debug_config
-                            .iter()
-                            .map(SingleValue::toml_pair)
-                            .collect(),
+                        source.debug.iter().map(SingleValue::toml_pair).collect(),
                     );
                 }
-                if !sel4_config.release_config.is_empty() {
-                    config.insert_table(
+                if !source.release.is_empty() {
+                    properties.insert_table(
                         "release",
-                        sel4_config
-                            .release_config
-                            .iter()
-                            .map(SingleValue::toml_pair)
-                            .collect(),
+                        source.release.iter().map(SingleValue::toml_pair).collect(),
                     );
                 }
-                for (k, t) in sel4_config.contextual_config.iter() {
-                    config.insert_table(k.as_ref(), t.iter().map(SingleValue::toml_pair).collect());
+                for (k, t) in source.contextual.iter() {
+                    properties
+                        .insert_table(k.as_ref(), t.iter().map(SingleValue::toml_pair).collect());
                 }
-                config
+                properties
             }
-            sel4.insert_table("config", serialize_config(&self.sel4.config));
+            sel4.insert_table("config", serialize_properties_tree(&self.sel4.config));
 
             fn serialize_build(source: &BTreeMap<String, PlatformBuild>) -> Option<TomlTable> {
                 if source.is_empty() {
@@ -761,6 +783,10 @@ pub mod full {
             if let Some(build) = serialize_build(&self.build) {
                 top.insert_table("build", build);
             }
+            let metadata = serialize_properties_tree(&self.metadata);
+            if !metadata.is_empty() {
+                top.insert_table("metadata", metadata);
+            }
             top
         }
 
@@ -771,22 +797,23 @@ pub mod full {
     }
 
     fn toml_table_to_map_of_singles(
-        t: toml::value::Table,
+        t: &toml::value::Table,
     ) -> Result<BTreeMap<String, SingleValue>, ImportError> {
         t.into_iter().map(SingleValue::single_pair).collect()
     }
 
-    fn structure_config(rc: BTreeMap<String, TomlValue>) -> Result<Config, ImportError> {
-        let mut shared_config: BTreeMap<String, SingleValue> = BTreeMap::new();
-        let mut debug_config: Option<BTreeMap<String, SingleValue>> = None;
-        let mut release_config: Option<BTreeMap<String, SingleValue>> = None;
-        let mut contextual_config: BTreeMap<String, BTreeMap<String, SingleValue>> =
-            BTreeMap::new();
+    fn structure_property_tree(
+        rc: BTreeMap<String, TomlValue>,
+    ) -> Result<PropertiesTree, ImportError> {
+        let mut shared: BTreeMap<String, SingleValue> = BTreeMap::new();
+        let mut debug: Option<BTreeMap<String, SingleValue>> = None;
+        let mut release: Option<BTreeMap<String, SingleValue>> = None;
+        let mut contextual: BTreeMap<String, BTreeMap<String, SingleValue>> = BTreeMap::new();
         for (k, v) in rc.into_iter() {
             if k == "debug" {
                 match v {
                     TomlValue::Table(t) => {
-                        debug_config.replace(toml_table_to_map_of_singles(t)?);
+                        debug.replace(toml_table_to_map_of_singles(&t)?);
                     }
                     _ => {
                         return Err(ImportError::TypeMismatch {
@@ -800,7 +827,7 @@ pub mod full {
             } else if k == "release" {
                 match v {
                     TomlValue::Table(t) => {
-                        release_config.replace(toml_table_to_map_of_singles(t)?);
+                        release.replace(toml_table_to_map_of_singles(&t)?);
                     }
                     _ => {
                         return Err(ImportError::TypeMismatch {
@@ -814,11 +841,11 @@ pub mod full {
             } else {
                 match v {
                     TomlValue::String(_) | TomlValue::Integer(_) | TomlValue::Boolean(_) => {
-                        let (k, v) = SingleValue::single_pair((k, v))?;
-                        shared_config.insert(k, v);
+                        let (k, v) = SingleValue::single_pair((&k, &v))?;
+                        shared.insert(k, v);
                     }
                     TomlValue::Table(t) => {
-                        contextual_config.insert(k, toml_table_to_map_of_singles(t)?);
+                        contextual.insert(k, toml_table_to_map_of_singles(&t)?);
                     }
                     TomlValue::Float(_) | TomlValue::Datetime(_) | TomlValue::Array(_) => {
                         return Err(ImportError::TypeMismatch {
@@ -831,11 +858,11 @@ pub mod full {
             }
         }
 
-        Ok(Config {
-            shared_config,
-            debug_config: debug_config.unwrap_or_else(BTreeMap::new),
-            release_config: release_config.unwrap_or_else(BTreeMap::new),
-            contextual_config,
+        Ok(PropertiesTree {
+            shared,
+            debug: debug.unwrap_or_else(BTreeMap::new),
+            release: release.unwrap_or_else(BTreeMap::new),
+            contextual,
         })
     }
 }
@@ -868,6 +895,7 @@ pub mod contextualized {
         pub context: Context,
         pub sel4_config: BTreeMap<String, SingleValue>,
         pub build: Build,
+        pub metadata: BTreeMap<String, SingleValue>,
     }
 
     #[derive(Debug, Clone, Eq, PartialEq, Default, Hash)]
@@ -915,8 +943,8 @@ pub mod contextualized {
         ) -> Result<Contextualized, ImportError> {
             let context = Context {
                 platform: platform.clone(),
-                arch: arch,
-                sel4_arch: sel4_arch,
+                arch,
+                sel4_arch,
                 is_debug,
                 base_dir: base_dir.map(|p| p.to_path_buf()),
             };
@@ -944,27 +972,31 @@ pub mod contextualized {
                 root_task,
             };
 
-            let source_config = f.sel4.config;
-            let mut sel4_config = source_config.shared_config;
-            if is_debug {
-                sel4_config.extend(source_config.debug_config)
-            } else {
-                sel4_config.extend(source_config.release_config)
+            fn resolve_context(
+                tree: &full::PropertiesTree,
+                context: &Context,
+            ) -> BTreeMap<String, SingleValue> {
+                let mut flat_properties = tree.shared.clone();
+                if context.is_debug {
+                    flat_properties.extend(tree.debug.clone())
+                } else {
+                    flat_properties.extend(tree.release.clone())
+                }
+
+                if let Some(arch_props) = tree.contextual.get(&context.arch.to_string()) {
+                    flat_properties.extend(arch_props.clone());
+                }
+                if let Some(sel4_arch_props) = tree.contextual.get(&context.sel4_arch.to_string()) {
+                    flat_properties.extend(sel4_arch_props.clone());
+                }
+                if let Some(platform_props) = tree.contextual.get(&context.platform.to_string()) {
+                    flat_properties.extend(platform_props.clone());
+                }
+                flat_properties
             }
-            let mut source_contextual_config = source_config.contextual_config;
-            if let Some(arch_config) = source_contextual_config.remove(&context.arch.to_string()) {
-                sel4_config.extend(arch_config);
-            }
-            if let Some(sel4_arch_config) =
-                source_contextual_config.remove(&context.sel4_arch.to_string())
-            {
-                sel4_config.extend(sel4_arch_config);
-            }
-            if let Some(platform_config) =
-                source_contextual_config.remove(&context.platform.to_string())
-            {
-                sel4_config.extend(platform_config);
-            }
+
+            let sel4_config = resolve_context(&f.sel4.config, &context);
+            let metadata = resolve_context(&f.metadata, &context);
 
             let sources = f.sel4.sources.relative_to(base_dir);
 
@@ -973,6 +1005,7 @@ pub mod contextualized {
                 context,
                 sel4_config,
                 build,
+                metadata,
             })
         }
 
@@ -1049,6 +1082,7 @@ mod tests {
                     config: Default::default(),
                 },
                 build: Default::default(),
+                metadata: Default::default(),
             }
         }
     }
