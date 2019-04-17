@@ -23,7 +23,7 @@ use quote::quote;
 extern crate itertools;
 use itertools::Itertools;
 
-const BLACKLIST_TYPES: &'static [&'static str] = &[
+const BLACKLIST_ITEMS: &'static [&'static str] = &[
     "seL4_CPtr",
     "seL4_Word",
     "seL4_Int8",
@@ -34,6 +34,7 @@ const BLACKLIST_TYPES: &'static [&'static str] = &[
     "seL4_Uint16",
     "seL4_Uint32",
     "seL4_Uint64",
+    "seL4_WordBits",
 ];
 
 const BUILD_INCLUDE_DIRS: &'static [&'static str] = &[
@@ -80,8 +81,8 @@ fn gen_bindings(
         .use_core()
         .ctypes_prefix("ctypes");
 
-    for t in BLACKLIST_TYPES {
-        bindings = bindings.blacklist_type(t);
+    for i in BLACKLIST_ITEMS {
+        bindings = bindings.blacklist_item(i);
     }
 
     for d in BUILD_INCLUDE_DIRS {

@@ -25,6 +25,8 @@ type seL4_Uint16 = u16;
 type seL4_Uint32 = u32;
 type seL4_Uint64 = u64;
 
+pub const seL4_WordBits: usize = core::mem::size_of::<usize>() * 8;
+
 #[cfg(any(target_arch = "arm", target_arch = "x86"))]
 mod ctypes {
     pub type c_char = i8;
