@@ -245,7 +245,7 @@ pub struct SeL4Sources {
 }
 
 impl SeL4Sources {
-    fn relative_to(&self, base_dir: Option<&Path>) -> Self {
+    fn relative_to<P: AsRef<Path>>(&self, base_dir: &Option<P>) -> Self {
         SeL4Sources {
             kernel: self.kernel.relative_to(base_dir),
             tools: self.tools.relative_to(base_dir),
@@ -261,10 +261,10 @@ pub enum RepoSource {
 }
 
 impl RepoSource {
-    fn relative_to(&self, base_dir: Option<&Path>) -> Self {
+    fn relative_to<P: AsRef<Path>>(&self, base_dir: &Option<P>) -> Self {
         match self {
             RepoSource::LocalPath(p) => RepoSource::LocalPath(p.relative_to(base_dir)),
-            s @ _ => s.clone(),
+            s => s.clone(),
         }
     }
 }
@@ -346,14 +346,14 @@ pub mod full {
 trait RelativePath {
     // If self is relative, and a base is supplied, evaluate self relative to
     // the base. Otherwise hand back self.
-    fn relative_to(&self, base: Option<&Path>) -> PathBuf;
+    fn relative_to<P: AsRef<Path>>(&self, base: &Option<P>) -> PathBuf;
 }
 
 impl RelativePath for Path {
-    fn relative_to(&self, base: Option<&Path>) -> PathBuf {
+    fn relative_to<P: AsRef<Path>>(&self, base: &Option<P>) -> PathBuf {
         if self.is_relative() {
             match base {
-                Some(p) => p.join(self),
+                Some(p) => p.as_ref().join(self),
                 None => self.to_path_buf(),
             }
         } else {
@@ -406,11 +406,11 @@ pub mod contextualized {
             base_dir: Option<&Path>,
         ) -> Result<Contextualized, ImportError> {
             let f: full::Full = source_toml.parse()?;
-            Self::from_full(f, arch, sel4_arch, is_debug, platform, base_dir)
+            Self::from_full(&f, arch, sel4_arch, is_debug, platform, base_dir)
         }
 
         pub fn from_full(
-            mut f: full::Full,
+            f: &full::Full,
             arch: Arch,
             sel4_arch: Sel4Arch,
             is_debug: bool,
@@ -422,29 +422,41 @@ pub mod contextualized {
                 arch,
                 sel4_arch,
                 is_debug,
-                base_dir: base_dir.map(|p| p.to_path_buf()),
+                base_dir: base_dir.map(Path::to_path_buf),
             };
+            Contextualized::from_full_context(&f, context)
+        }
 
-            let platform_build = f.build.remove(&platform.to_string()).ok_or_else(|| {
-                ImportError::NoBuildSupplied {
-                    platform: platform.to_string(),
-                    profile: if is_debug { "debug" } else { "release " },
-                }
-            })?;
-            let build_profile = if is_debug {
+        pub fn from_full_context(
+            f: &full::Full,
+            context: Context,
+        ) -> Result<Contextualized, ImportError> {
+            let platform_build = f
+                .build
+                .get(&context.platform.to_string())
+                .ok_or_else(|| ImportError::NoBuildSupplied {
+                    platform: context.platform.to_string(),
+                    profile: if context.is_debug {
+                        "debug"
+                    } else {
+                        "release "
+                    },
+                })?
+                .clone();
+            let build_profile = if context.is_debug {
                 platform_build.debug_build_profile
             } else {
                 platform_build.release_build_profile
             };
             let root_task = build_profile.map(|bp| RootTask {
                 make_command: bp.make_root_task,
-                image_path: bp.root_task_image.relative_to(base_dir),
+                image_path: bp.root_task_image.relative_to(&context.base_dir),
             });
             let build = Build {
                 cross_compiler_prefix: platform_build.cross_compiler_prefix,
                 toolchain_dir: platform_build
                     .toolchain_dir
-                    .map(|p| p.relative_to(base_dir)),
+                    .map(|p| p.relative_to(&context.base_dir)),
                 root_task,
             };
 
@@ -474,7 +486,7 @@ pub mod contextualized {
             let sel4_config = resolve_context(&f.sel4.config, &context);
             let metadata = resolve_context(&f.metadata, &context);
 
-            let sel4_sources = f.sel4.sources.relative_to(base_dir);
+            let sel4_sources = f.sel4.sources.relative_to(&context.base_dir);
 
             Ok(Contextualized {
                 sel4_sources,
@@ -538,7 +550,7 @@ mod tests {
             },
         );
         let c = contextualized::Contextualized::from_full(
-            f,
+            &f,
             Arch::Arm,
             Sel4Arch::Aarch32,
             false,

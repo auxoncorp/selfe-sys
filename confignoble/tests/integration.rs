@@ -105,7 +105,7 @@ fn full_parse_happy_path() {
     );
 
     let resolved_some_arbitrary_platform_default = contextualized::Contextualized::from_full(
-        f.clone(),
+        &f,
         Arch::Arm,
         Sel4Arch::Aarch32,
         true,
@@ -115,7 +115,7 @@ fn full_parse_happy_path() {
     .unwrap();
 
     let resolved_sabre = contextualized::Contextualized::from_full(
-        f.clone(),
+        &f,
         Arch::Arm,
         Sel4Arch::Aarch32,
         true,
@@ -240,7 +240,7 @@ fn finds_contextualized_metadata() {
     let f: full::Full = WITH_METADATA.parse().expect("could not read toml");
 
     let arm_aarch32_sabre_debug = contextualized::Contextualized::from_full(
-        f.clone(),
+        &f,
         Arch::Arm,
         Sel4Arch::Aarch32,
         true,
@@ -257,7 +257,7 @@ fn finds_contextualized_metadata() {
     assert_contains_int(&arm_aarch32_sabre_debug.metadata, "sabre-specific", 11);
 
     let arm_aarch64_sabre_debug = contextualized::Contextualized::from_full(
-        f.clone(),
+        &f,
         Arch::Arm,
         Sel4Arch::Aarch64,
         true,
@@ -274,7 +274,7 @@ fn finds_contextualized_metadata() {
     assert_contains_int(&arm_aarch64_sabre_debug.metadata, "sabre-specific", 11);
 
     let arm_aarch64_sabre_release = contextualized::Contextualized::from_full(
-        f.clone(),
+        &f,
         Arch::Arm,
         Sel4Arch::Aarch64,
         false,
@@ -291,7 +291,7 @@ fn finds_contextualized_metadata() {
     assert_contains_int(&arm_aarch64_sabre_release.metadata, "sabre-specific", 11);
 
     let x86_x86_64_pc99_release = contextualized::Contextualized::from_full(
-        f.clone(),
+        &f,
         Arch::X86,
         Sel4Arch::X86_64,
         false,

@@ -54,7 +54,7 @@ impl BuildEnv {
         /// Get the environment variable `var`, or panic with a helpful message if it's
         /// not set.
         fn get_env(var: &str) -> String {
-            env::var(var).expect(&format!("{} must be set", var))
+            env::var(var).unwrap_or_else(|_| panic!("{} must be set", var))
         }
         let raw_profile = get_env("PROFILE");
         let cargo_cfg_target_arch = get_env("CARGO_CFG_TARGET_ARCH");
@@ -93,19 +93,20 @@ pub fn load_config_from_env_or_default() -> model::contextualized::Contextualize
     let (full_config, config_dir) = sel4_config_path
         .map(|config_file_path| {
             let config_file_path =
-                fs::canonicalize(&Path::new(&config_file_path)).expect(&format!(
-                    "Config file could not be canonicalized: {}",
-                    config_file_path.display()
-                ));
+                fs::canonicalize(&Path::new(&config_file_path)).unwrap_or_else(|_| {
+                    panic!(
+                        "Config file could not be canonicalized: {}",
+                        config_file_path.display()
+                    )
+                });
 
             let config_file_dir = config_file_path
                 .parent()
                 .expect("Can't get parent of config file path");
             println!("cargo:rerun-if-changed={}", config_file_path.display());
-            let config_content = fs::read_to_string(&config_file_path).expect(&format!(
-                "Can't read config file: {}",
-                config_file_path.display()
-            ));
+            let config_content = fs::read_to_string(&config_file_path).unwrap_or_else(|_| {
+                panic!("Can't read config file: {}", config_file_path.display())
+            });
             (
                 model::full::Full::from_str(&config_content).expect("Error processing config file"),
                 Some(config_file_dir.to_owned()),
@@ -146,12 +147,12 @@ pub fn load_config_from_env_or_default() -> model::contextualized::Contextualize
     }));
 
     model::contextualized::Contextualized::from_full(
-        full_config,
+        &full_config,
         arch,
         sel4_arch,
         profile.is_debug(),
         platform,
-        config_dir.as_ref().map(|pb| pb.as_path()),
+        config_dir.as_ref().map(PathBuf::as_path),
     )
     .expect("Error resolving config file")
 }
@@ -159,9 +160,8 @@ pub fn load_config_from_env_or_default() -> model::contextualized::Contextualize
 impl model::contextualized::Contextualized {
     pub fn print_boolean_feature_flags(&self) {
         for (k, v) in self.sel4_config.iter() {
-            match v {
-                model::SingleValue::Boolean(true) => println!("cargo:rustc-cfg={}", k),
-                _ => (),
+            if let model::SingleValue::Boolean(true) = v {
+                println!("cargo:rustc-cfg={}", k)
             };
         }
     }

@@ -104,11 +104,13 @@ pub fn resolve_sel4_sources(
                 let dir = dest_dir.join(name_suffix);
                 let dir_needs_content = is_dir_absent_or_empty(&dir);
                 fs::create_dir_all(&dir).expect("Failed to create dir");
-                let dir = fs::canonicalize(&dir).expect(&format!(
-                    "Failed to canonicalize {} dir: {}",
-                    name_hint,
-                    &dir.display()
-                ));
+                let dir = fs::canonicalize(&dir).unwrap_or_else(|_| {
+                    panic!(
+                        "Failed to canonicalize {} dir: {}",
+                        name_hint,
+                        &dir.display()
+                    )
+                });
 
                 if dir_needs_content {
                     match target {
@@ -268,7 +270,7 @@ pub fn build_sel4(
         .get("KernelSel4Arch")
         .expect("KernelSel4Arch missing but required as a sel4 config option");
     // TODO - should we enforce that this value matches the resolved config platform name?
-    if let Some(_) = cmake_opts.get("KernelPlatform") {
+    if cmake_opts.get("KernelPlatform").is_some() {
         panic!("Explicitly supplying a KernelPlatform property interferes with the inner workings of the seL4 cmake build")
     }
     let kernel_platform = cmake_opts.get("KernelX86Platform").unwrap_or_else(|| {

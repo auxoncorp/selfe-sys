@@ -1,8 +1,8 @@
 use clap::{App, Arg, SubCommand};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::{env, fs};
 use std::str::FromStr;
+use std::{env, fs};
 
 extern crate confignoble;
 
@@ -11,7 +11,7 @@ mod simulate;
 use confignoble::compilation::{
     build_sel4, resolve_sel4_sources, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome,
 };
-use confignoble::model::{Arch, Sel4Arch, Platform};
+use confignoble::model::{Arch, Platform, Sel4Arch};
 
 /// Walk up the directory tree from `start_dir`, looking for "sel4.toml"
 fn find_sel4_toml(start_dir: &Path) -> Option<PathBuf> {
@@ -23,7 +23,7 @@ fn find_sel4_toml(start_dir: &Path) -> Option<PathBuf> {
 
     let toml = start_dir.join("sel4.toml");
     if toml.exists() {
-        return Some(toml);
+        Some(toml)
     } else {
         match start_dir.parent() {
             Some(d) => find_sel4_toml(d),
@@ -120,14 +120,18 @@ impl Execution {
             let sel4_arch = Sel4Arch::from_str(raw_sel4_arch)
                 .expect("sel4_arch argument is not a known sel4_arch value.");
 
-            let platform = Platform(matches
-                .value_of("platform")
-                .expect("Missing required platform argument")
-                .to_owned());
+            let platform = Platform(
+                matches
+                    .value_of("platform")
+                    .expect("Missing required platform argument")
+                    .to_owned(),
+            );
 
             let arch = match matches.value_of("arch") {
-                Some(s) => Some(Arch::from_str(s).expect("arch argument is not a known arch value")),
-                None => None
+                Some(s) => {
+                    Some(Arch::from_str(s).expect("arch argument is not a known arch value"))
+                }
+                None => None,
             };
 
             BuildParams {
@@ -194,14 +198,14 @@ fn build_kernel(
         .parent()
         .expect("Can't get parent of config file path");
 
-    let config_content = fs::read_to_string(&config_file_path).expect(&format!(
-        "Can't read config file: {}",
-        config_file_path.display()
-    ));
+    let config_content = fs::read_to_string(&config_file_path)
+        .unwrap_or_else(|_| panic!("Can't read config file: {}", config_file_path.display()));
 
     let config = confignoble::model::contextualized::Contextualized::from_str(
         &config_content,
-        build_params.arch.unwrap_or_else(|| Arch::from_sel4_arch(build_params.sel4_arch)),
+        build_params
+            .arch
+            .unwrap_or_else(|| Arch::from_sel4_arch(build_params.sel4_arch)),
         build_params.sel4_arch,
         is_debug,
         build_params.platform.clone(),
@@ -219,7 +223,7 @@ fn build_kernel(
         .expect("resolve sel4 source");
 
     let root_task = config.build.root_task.as_ref()
-        .expect(&format!("root task information, particularly a root_task_image path must be supplied in [build.platform.profile], here [build.{}.{}]",
+        .unwrap_or_else(|| panic!("root task information, particularly a root_task_image path must be supplied in [build.platform.profile], here [build.{}.{}]",
         config.context.platform, if config.context.is_debug { "debug"} else { "release"})).clone();
 
     if let Some(make_root_task_command) = root_task.make_command {
@@ -232,7 +236,10 @@ fn build_kernel(
             .env("SEL4_CONFIG_PATH", &config_file_path)
             .env("SEL4_PLATFORM", &config.context.platform.to_string())
             .env("SEL4_OVERRIDE_ARCH", &config.context.arch.to_string())
-            .env("SEL4_OVERRIDE_SEL4_ARCH", &config.context.sel4_arch.to_string())
+            .env(
+                "SEL4_OVERRIDE_SEL4_ARCH",
+                &config.context.sel4_arch.to_string(),
+            )
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit());
 

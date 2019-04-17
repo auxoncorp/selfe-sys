@@ -109,7 +109,7 @@ impl FromStr for Raw {
 
         fn parse_required_table(parent: &TomlTable, key: &str) -> Result<TomlTable, ImportError> {
             if let Some(val) = parent.get(key) {
-                Ok(val.as_table().map(|s| s.to_owned()).ok_or_else(|| {
+                Ok(val.as_table().map(ToOwned::to_owned).ok_or_else(|| {
                     ImportError::TypeMismatch {
                         name: key.to_string(),
                         expected: "table",
@@ -272,7 +272,7 @@ impl FromStr for full::Full {
                 sources,
                 config: structure_property_tree(sel4.config)?,
             },
-            build: build.unwrap_or_else(|| BTreeMap::new()),
+            build: build.unwrap_or_else(BTreeMap::new),
             metadata: structure_property_tree(metadata)?,
         })
     }
@@ -280,7 +280,7 @@ impl FromStr for full::Full {
 
 fn parse_optional_string(table: &TomlTable, key: &str) -> Result<Option<String>, ImportError> {
     if let Some(val) = table.get(key) {
-        Ok(Some(val.as_str().map(|s| s.to_owned()).ok_or_else(
+        Ok(Some(val.as_str().map(ToOwned::to_owned).ok_or_else(
             || ImportError::TypeMismatch {
                 name: key.to_string(),
                 expected: "string",
@@ -296,7 +296,7 @@ fn parse_required_string(table: &TomlTable, key: &str) -> Result<String, ImportE
     if let Some(val) = table.get(key) {
         Ok(val
             .as_str()
-            .map(|s| s.to_owned())
+            .map(ToOwned::to_owned)
             .ok_or_else(|| ImportError::TypeMismatch {
                 name: key.to_string(),
                 expected: "string",
