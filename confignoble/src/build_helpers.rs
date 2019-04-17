@@ -155,3 +155,14 @@ pub fn load_config_from_env_or_default() -> model::contextualized::Contextualize
     )
     .expect("Error resolving config file")
 }
+
+impl model::contextualized::Contextualized {
+    pub fn print_boolean_feature_flags(&self) {
+        for (k, v) in self.sel4_config.iter() {
+            match v {
+                model::SingleValue::Boolean(true) => println!("cargo:rustc-cfg={}", k),
+                _ => (),
+            };
+        }
+    }
+}
