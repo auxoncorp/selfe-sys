@@ -73,7 +73,7 @@ fn gen_bindings(
     sel4_arch: model::Sel4Arch,
     ptr_width: usize,
 ) {
-    println!("cargo:rerun-if-file-changed=src/bindgen_wrapper.h");
+    println!("cargo:rerun-if-changed=src/bindgen_wrapper.h");
 
     let mut bindings = Builder::default()
         .header("src/bindgen_wrapper.h")
@@ -123,7 +123,7 @@ struct BitfieldField {
 }
 
 fn load_bitfields_toml() -> Vec<BitfieldType> {
-    println!("cargo:rerun-if-file-changed=codegen/bitfields.toml");
+    println!("cargo:rerun-if-changed=codegen/bitfields.toml");
     let bitfields_toml_str = include_str!("codegen/bitfields.toml");
     let bitfields_toml: toml::value::Value =
         toml::from_str(bitfields_toml_str).expect("Parsing bitfields.toml");
@@ -414,8 +414,8 @@ fn main() {
         out_dir,
         ..
     } = BuildEnv::from_env_vars();
-    println!("cargo:rerun-if-file-changed=build.rs");
-    println!("cargo:rerun-if-file-changed=src/lib.rs");
+    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=src/lib.rs");
     println!("cargo:rerun-if-env-changed=RUSTFLAGS");
 
     gen_tests(&out_dir);

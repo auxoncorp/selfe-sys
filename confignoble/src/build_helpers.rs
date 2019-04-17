@@ -101,7 +101,7 @@ pub fn load_config_from_env_or_default() -> model::contextualized::Contextualize
             let config_file_dir = config_file_path
                 .parent()
                 .expect("Can't get parent of config file path");
-            println!("cargo:rerun-if-file-changed={}", config_file_path.display());
+            println!("cargo:rerun-if-changed={}", config_file_path.display());
             let config_content = fs::read_to_string(&config_file_path).expect(&format!(
                 "Can't read config file: {}",
                 config_file_path.display()
