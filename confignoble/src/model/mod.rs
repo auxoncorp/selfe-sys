@@ -101,7 +101,7 @@ impl FromStr for RustArch {
 
 ///  This is sel4's notion of 'sel4_arch'
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub enum Sel4Arch {
+pub enum SeL4Arch {
     Aarch32,
     Aarch64,
     ArmHyp,
@@ -111,64 +111,64 @@ pub enum Sel4Arch {
     Riscv64,
 }
 
-impl FromStr for Sel4Arch {
+impl FromStr for SeL4Arch {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "aarch32" => Ok(Sel4Arch::Aarch32),
-            "aarch64" => Ok(Sel4Arch::Aarch64),
-            "arm_hyp" => Ok(Sel4Arch::ArmHyp),
-            "ia32" => Ok(Sel4Arch::Ia32),
-            "riscv32" => Ok(Sel4Arch::Riscv32),
-            "riscv64" => Ok(Sel4Arch::Riscv64),
-            "x86_64" => Ok(Sel4Arch::X86_64),
+            "aarch32" => Ok(SeL4Arch::Aarch32),
+            "aarch64" => Ok(SeL4Arch::Aarch64),
+            "arm_hyp" => Ok(SeL4Arch::ArmHyp),
+            "ia32" => Ok(SeL4Arch::Ia32),
+            "riscv32" => Ok(SeL4Arch::Riscv32),
+            "riscv64" => Ok(SeL4Arch::Riscv64),
+            "x86_64" => Ok(SeL4Arch::X86_64),
             _ => Err("Unrecognized sel4_arch".to_string()),
         }
     }
 }
 
-impl Sel4Arch {
+impl SeL4Arch {
     /// Create an Arch from the first part of a rust target triple
-    pub fn from_rust_arch(rust_arch: RustArch) -> Option<Sel4Arch> {
+    pub fn from_rust_arch(rust_arch: RustArch) -> Option<SeL4Arch> {
         match rust_arch {
-            RustArch::Aarch64 => Some(Sel4Arch::Aarch64),
+            RustArch::Aarch64 => Some(SeL4Arch::Aarch64),
 
             RustArch::Arm
             | RustArch::Armebv7r
             | RustArch::Armv7
             | RustArch::Armv7r
-            | RustArch::Armv7s => Some(Sel4Arch::Aarch32),
+            | RustArch::Armv7s => Some(SeL4Arch::Aarch32),
 
-            RustArch::I386 | RustArch::I586 | RustArch::I686 => Some(Sel4Arch::Ia32),
+            RustArch::I386 | RustArch::I586 | RustArch::I686 => Some(SeL4Arch::Ia32),
 
-            RustArch::Riscv32imac | RustArch::Riscv32imc => Some(Sel4Arch::Riscv32),
+            RustArch::Riscv32imac | RustArch::Riscv32imc => Some(SeL4Arch::Riscv32),
 
-            RustArch::Riscv64gc | RustArch::Riscv64imac => Some(Sel4Arch::Riscv64),
+            RustArch::Riscv64gc | RustArch::Riscv64imac => Some(SeL4Arch::Riscv64),
 
             RustArch::Thumbv6m
             | RustArch::Thumbv7em
             | RustArch::Thumbv7m
-            | RustArch::Thumbv7neon => Some(Sel4Arch::Aarch32),
+            | RustArch::Thumbv7neon => Some(SeL4Arch::Aarch32),
 
-            RustArch::Thumbv8mmain => Some(Sel4Arch::Aarch64),
+            RustArch::Thumbv8mmain => Some(SeL4Arch::Aarch64),
 
-            RustArch::X86_64 => Some(Sel4Arch::X86_64),
+            RustArch::X86_64 => Some(SeL4Arch::X86_64),
             _ => None,
         }
     }
 }
 
-impl Display for Sel4Arch {
+impl Display for SeL4Arch {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match self {
-            Sel4Arch::Aarch32 => "aarch32",
-            Sel4Arch::Aarch64 => "aarch64",
-            Sel4Arch::ArmHyp => "arm_hyp",
-            Sel4Arch::Ia32 => "ia32",
-            Sel4Arch::X86_64 => "x86_64",
-            Sel4Arch::Riscv32 => "riscv32",
-            Sel4Arch::Riscv64 => "riscv64",
+            SeL4Arch::Aarch32 => "aarch32",
+            SeL4Arch::Aarch64 => "aarch64",
+            SeL4Arch::ArmHyp => "arm_hyp",
+            SeL4Arch::Ia32 => "ia32",
+            SeL4Arch::X86_64 => "x86_64",
+            SeL4Arch::Riscv32 => "riscv32",
+            SeL4Arch::Riscv64 => "riscv64",
         };
         write!(f, "{}", s)
     }
@@ -196,17 +196,17 @@ impl FromStr for Arch {
 }
 
 impl Arch {
-    pub fn from_sel4_arch(sel4_arch: Sel4Arch) -> Arch {
+    pub fn from_sel4_arch(sel4_arch: SeL4Arch) -> Arch {
         match sel4_arch {
-            Sel4Arch::Aarch32 | Sel4Arch::Aarch64 | Sel4Arch::ArmHyp => Arch::Arm,
-            Sel4Arch::Ia32 | Sel4Arch::X86_64 => Arch::X86,
-            Sel4Arch::Riscv32 | Sel4Arch::Riscv64 => Arch::Riscv,
+            SeL4Arch::Aarch32 | SeL4Arch::Aarch64 | SeL4Arch::ArmHyp => Arch::Arm,
+            SeL4Arch::Ia32 | SeL4Arch::X86_64 => Arch::X86,
+            SeL4Arch::Riscv32 | SeL4Arch::Riscv64 => Arch::Riscv,
         }
     }
 
     /// Create an Arch from the first part of a rust target triple
     pub fn from_rust_arch(rust_arch: RustArch) -> Option<Arch> {
-        Sel4Arch::from_rust_arch(rust_arch).map(Arch::from_sel4_arch)
+        SeL4Arch::from_rust_arch(rust_arch).map(Arch::from_sel4_arch)
     }
 }
 
@@ -393,14 +393,14 @@ pub mod contextualized {
         pub is_debug: bool,
         pub base_dir: Option<PathBuf>,
         pub arch: Arch,
-        pub sel4_arch: Sel4Arch,
+        pub sel4_arch: SeL4Arch,
     }
 
     impl Contextualized {
         pub fn from_str(
             source_toml: &str,
             arch: Arch,
-            sel4_arch: Sel4Arch,
+            sel4_arch: SeL4Arch,
             is_debug: bool,
             platform: Platform,
             base_dir: Option<&Path>,
@@ -412,7 +412,7 @@ pub mod contextualized {
         pub fn from_full(
             f: &full::Full,
             arch: Arch,
-            sel4_arch: Sel4Arch,
+            sel4_arch: SeL4Arch,
             is_debug: bool,
             platform: Platform,
             base_dir: Option<&Path>,
@@ -552,7 +552,7 @@ mod tests {
         let c = contextualized::Contextualized::from_full(
             &f,
             Arch::Arm,
-            Sel4Arch::Aarch32,
+            SeL4Arch::Aarch32,
             false,
             expected.clone(),
             None,
@@ -561,7 +561,7 @@ mod tests {
         assert_eq!(expected, c.context.platform);
         assert_eq!(false, c.context.is_debug);
         assert_eq!(Arch::Arm, c.context.arch);
-        assert_eq!(Sel4Arch::Aarch32, c.context.sel4_arch);
+        assert_eq!(SeL4Arch::Aarch32, c.context.sel4_arch);
         assert_eq!(
             "cmake",
             c.build

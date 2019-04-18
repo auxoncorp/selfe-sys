@@ -5,7 +5,7 @@ use core::panic::PanicInfo;
 
 use core::fmt::Write;
 use sel4_start::{self, DebugOutHandle};
-use sel4_sys::{seL4_CapInitThreadTCB, seL4_TCB_Suspend};
+use sel4_sys::{seL4_BootInfo, seL4_CapInitThreadTCB, seL4_TCB_Suspend};
 
 fn main() {
     #[cfg(target_arch = "arm")]
@@ -15,7 +15,7 @@ fn main() {
 
     writeln!(DebugOutHandle, "\n\nHello {} world!\n\n", arch).unwrap();
 
-    let bootinfo = unsafe { &*sel4_start::BOOTINFO };
+    let bootinfo: &'static seL4_BootInfo = unsafe { &*sel4_start::BOOTINFO };
     let num_nodes = bootinfo.numNodes; // Pull out a reference to resolve packed-struct misalignment risk
     writeln!(
         DebugOutHandle,

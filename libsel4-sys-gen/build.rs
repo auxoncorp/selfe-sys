@@ -12,7 +12,7 @@ use confignoble::build_helpers::*;
 use confignoble::compilation::{
     build_sel4, resolve_sel4_sources, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome,
 };
-use confignoble::model::{self, Arch, Sel4Arch};
+use confignoble::model::{self, Arch, SeL4Arch};
 
 extern crate proc_macro2;
 use proc_macro2::{Ident, Span, TokenStream};
@@ -53,7 +53,7 @@ const KERNEL_INCLUDE_DIRS: &'static [&'static str] = &[
     "libsel4/mode_include/$PTR_WIDTH$",
 ];
 
-fn expand_include_dir(d: &str, arch: Arch, sel4_arch: Sel4Arch, ptr_width: usize) -> String {
+fn expand_include_dir(d: &str, arch: Arch, sel4_arch: SeL4Arch, ptr_width: usize) -> String {
     d.replace("$ARCH$", &arch.to_string())
         .replace("$SEL4_ARCH$", &sel4_arch.to_string())
         .replace("$PTR_WIDTH$", &format!("{}", ptr_width))
@@ -71,7 +71,7 @@ fn gen_bindings(
     kernel_path: &Path,
     libsel4_build_path: &Path,
     arch: model::Arch,
-    sel4_arch: model::Sel4Arch,
+    sel4_arch: model::SeL4Arch,
     ptr_width: usize,
 ) {
     println!("cargo:rerun-if-changed=src/bindgen_wrapper.h");

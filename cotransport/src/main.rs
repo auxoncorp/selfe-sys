@@ -11,7 +11,7 @@ mod simulate;
 use confignoble::compilation::{
     build_sel4, resolve_sel4_sources, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome,
 };
-use confignoble::model::{Arch, Platform, Sel4Arch};
+use confignoble::model::{Arch, Platform, SeL4Arch};
 
 /// Walk up the directory tree from `start_dir`, looking for "sel4.toml"
 fn find_sel4_toml(start_dir: &Path) -> Option<PathBuf> {
@@ -33,7 +33,7 @@ fn find_sel4_toml(start_dir: &Path) -> Option<PathBuf> {
 }
 
 pub struct BuildParams {
-    sel4_arch: Sel4Arch,
+    sel4_arch: SeL4Arch,
     arch: Option<Arch>,
     platform: Platform,
     is_debug: bool,
@@ -117,7 +117,7 @@ impl Execution {
             let raw_sel4_arch = matches
                 .value_of("sel4_arch")
                 .expect("Missing required arch argument");
-            let sel4_arch = Sel4Arch::from_str(raw_sel4_arch)
+            let sel4_arch = SeL4Arch::from_str(raw_sel4_arch)
                 .expect("sel4_arch argument is not a known sel4_arch value.");
 
             let platform = Platform(

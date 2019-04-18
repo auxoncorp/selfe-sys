@@ -1,13 +1,13 @@
 //! Functions that can be called from build.rs, for when libraries need access
 //! to the sel4 configuration
 
-use crate::model::{self, Arch, Platform, RustArch, Sel4Arch};
+use crate::model::{self, Arch, Platform, RustArch, SeL4Arch};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::{env, fs};
 
 pub struct BuildEnv {
-    pub cargo_cfg_target_arch: String, // something like x86_64 or arm
+    pub cargo_cfg_target_arch: String,
     pub cargo_cfg_target_pointer_width: usize,
     pub out_dir: PathBuf,
     pub profile: BuildProfile,
@@ -120,9 +120,9 @@ pub fn load_config_from_env_or_default() -> model::contextualized::Contextualize
     let rust_arch = RustArch::from_str(&cargo_cfg_target_arch);
 
     let sel4_arch = match sel4_override_sel4_arch {
-        Some(s) => Sel4Arch::from_str(&s)
+        Some(s) => SeL4Arch::from_str(&s)
             .expect("Can't parse SEL4_OVERRIDE_SEL4_ARCH as a known sel4_arch value"),
-        None => Sel4Arch::from_rust_arch(rust_arch.unwrap())
+        None => SeL4Arch::from_rust_arch(rust_arch.unwrap())
             .expect("Can't find a sel4_arch for the current cargo target"),
     };
 

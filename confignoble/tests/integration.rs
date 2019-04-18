@@ -107,7 +107,7 @@ fn full_parse_happy_path() {
     let resolved_some_arbitrary_platform_default = contextualized::Contextualized::from_full(
         &f,
         Arch::Arm,
-        Sel4Arch::Aarch32,
+        SeL4Arch::Aarch32,
         true,
         Platform("some_arbitrary_platform".to_owned()),
         None,
@@ -117,7 +117,7 @@ fn full_parse_happy_path() {
     let resolved_sabre = contextualized::Contextualized::from_full(
         &f,
         Arch::Arm,
-        Sel4Arch::Aarch32,
+        SeL4Arch::Aarch32,
         true,
         Platform("sabre".to_string()),
         None,
@@ -148,7 +148,7 @@ fn happy_path_straight_to_contextualized() {
     let f = contextualized::Contextualized::from_str(
         EXAMPLE,
         Arch::Arm,
-        Sel4Arch::Aarch32,
+        SeL4Arch::Aarch32,
         true,
         Platform("sabre".to_owned()),
         None,
@@ -163,7 +163,7 @@ fn happy_path_straight_to_contextualized() {
         f.sel4_sources
     );
     assert_eq!(Arch::Arm, f.context.arch);
-    assert_eq!(Sel4Arch::Aarch32, f.context.sel4_arch);
+    assert_eq!(SeL4Arch::Aarch32, f.context.sel4_arch);
     assert_eq!(Platform("sabre".to_owned()), f.context.platform);
     assert_eq!(true, f.context.is_debug);
     println!("{:#?}", f.sel4_config);
@@ -242,7 +242,7 @@ fn finds_contextualized_metadata() {
     let arm_aarch32_sabre_debug = contextualized::Contextualized::from_full(
         &f,
         Arch::Arm,
-        Sel4Arch::Aarch32,
+        SeL4Arch::Aarch32,
         true,
         Platform("sabre".to_string()),
         None,
@@ -259,7 +259,7 @@ fn finds_contextualized_metadata() {
     let arm_aarch64_sabre_debug = contextualized::Contextualized::from_full(
         &f,
         Arch::Arm,
-        Sel4Arch::Aarch64,
+        SeL4Arch::Aarch64,
         true,
         Platform("sabre".to_string()),
         None,
@@ -276,7 +276,7 @@ fn finds_contextualized_metadata() {
     let arm_aarch64_sabre_release = contextualized::Contextualized::from_full(
         &f,
         Arch::Arm,
-        Sel4Arch::Aarch64,
+        SeL4Arch::Aarch64,
         false,
         Platform("sabre".to_string()),
         None,
@@ -293,7 +293,7 @@ fn finds_contextualized_metadata() {
     let x86_x86_64_pc99_release = contextualized::Contextualized::from_full(
         &f,
         Arch::X86,
-        Sel4Arch::X86_64,
+        SeL4Arch::X86_64,
         false,
         Platform("pc99".to_string()),
         None,
