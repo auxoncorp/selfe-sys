@@ -1,16 +1,14 @@
 set -e
 
+cd libsel4-sys-gen
+cargo test
+
 (
     cd confignoble
     cargo test
 
     cargo build --bin cotransport --features bin
     cargo test --features bin
-)
-
-(
-    cd libsel4-sys-gen
-    cargo test
 )
 
 (
