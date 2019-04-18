@@ -1,4 +1,4 @@
-use clap::{App, Arg, SubCommand};
+use clap::{crate_version, App, Arg, SubCommand};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
@@ -40,9 +40,15 @@ pub struct BuildParams {
     is_verbose: bool,
 }
 
+pub struct SimulateParams {
+    build: BuildParams,
+    serial_override: Option<String>,
+    extra_qemu_args: Option<Vec<String>>,
+}
+
 enum Execution {
     Build(BuildParams),
-    Simulate(BuildParams),
+    Simulate(SimulateParams),
 }
 
 trait AppExt {
@@ -105,10 +111,25 @@ impl Execution {
     fn get_or_run_help() -> Self {
         // TODO - naming / piping / phrasing
         let mut app = App::new("cotransport")
-            .version("0.1.0")
+            .version(crate_version!())
             .about("builds and runs seL4 applications")
             .subcommand(SubCommand::with_name("build").add_build_params())
-            .subcommand(SubCommand::with_name("simulate").add_build_params());
+            .subcommand(SubCommand::with_name("simulate").add_build_params()
+                .arg(
+                    Arg::with_name("serial-override")
+                        .long("serial-override")
+                        .value_name("SERIAL-OVERRIDE")
+                        .required(false)
+                        .help("If present, these contents will be added as qemu arguments in place of the default `--serial` definitions"),
+                )
+                .arg(
+                    Arg::with_name("extra-qemu-args")
+                        .multiple(true)
+                        .required(false)
+                        .last(true)
+                        .help("Additional unparsed arguments passed directly to the qemu command "),
+                )
+            );
         let matches = app.clone().get_matches();
 
         fn parse_build_params(matches: &clap::ArgMatches<'_>) -> BuildParams {
@@ -143,10 +164,24 @@ impl Execution {
             }
         }
 
+        fn parse_simulate_params(matches: &clap::ArgMatches<'_>) -> SimulateParams {
+            let build = parse_build_params(matches);
+            let serial_override = matches.value_of("serial-override").map(ToString::to_string);
+            let extra_qemu_args = matches
+                .values_of("extra-qemu-args")
+                .map(|vals| vals.map(ToString::to_string).collect());
+
+            SimulateParams {
+                build,
+                serial_override,
+                extra_qemu_args,
+            }
+        }
+
         if let Some(matches) = matches.subcommand_matches("build") {
             Execution::Build(parse_build_params(matches))
         } else if let Some(matches) = matches.subcommand_matches("simulate") {
-            Execution::Simulate(parse_build_params(matches))
+            Execution::Simulate(parse_simulate_params(matches))
         } else {
             let _ = app.print_help();
             panic!()
@@ -162,15 +197,15 @@ fn main() {
             let (outcome, _config) = &build_kernel(&b);
             print_kernel_paths(outcome);
         }
-        Execution::Simulate(b) => {
-            let (outcome, config) = build_kernel(&b);
+        Execution::Simulate(s) => {
+            let (outcome, config) = build_kernel(&s.build);
             if let SeL4BuildOutcome::Kernel {
                 kernel_path,
                 root_image_path,
                 ..
             } = outcome
             {
-                simulate::run_simulate(&b, &kernel_path, &root_image_path, &config)
+                simulate::run_simulate(&s, &kernel_path, &root_image_path, &config)
                     .expect("Simulation failed");
             } else {
                 panic!("Should not have built a static lib when a kernel is expected")

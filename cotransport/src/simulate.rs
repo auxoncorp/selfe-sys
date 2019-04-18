@@ -1,11 +1,11 @@
-use crate::BuildParams;
+use crate::SimulateParams;
 use confignoble::model::contextualized::Contextualized;
 use confignoble::model::SingleValue;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 pub fn run_simulate(
-    build_params: &BuildParams,
+    simulate_params: &SimulateParams,
     kernel_path: &Path,
     root_image_path: &Option<PathBuf>,
     config: &Contextualized,
@@ -49,15 +49,23 @@ pub fn run_simulate(
 
     command.arg("-nographic").arg("-s");
 
-    if let Some("sabrelite") = machine {
-        command.arg("-serial").arg("null");
+    if let Some(serial_override) = &simulate_params.serial_override {
+        command.args(serial_override.split_whitespace());
+    } else {
+        if let Some("sabrelite") = machine {
+            command.arg("-serial").arg("null");
+        }
+        command.arg("-serial").arg("mon:stdio");
     }
-    command.arg("-serial").arg("mon:stdio");
     command.arg("-m").arg("size=1024M");
+
+    if let Some(extra_qemu_args) = &simulate_params.extra_qemu_args {
+        command.args(extra_qemu_args.iter());
+    }
 
     command.stdout(Stdio::inherit()).stderr(Stdio::inherit());
 
-    if build_params.is_verbose {
+    if simulate_params.build.is_verbose {
         println!("Running qemu: {:?}", &command);
     }
     let output = command
