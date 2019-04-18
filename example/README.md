@@ -36,7 +36,7 @@ immediately delegates to an optional helper from `sel4-start`)
 
 `sel4-start` exposes to the root task a static `sel4_start::BOOTINFO` item
 that represents the kernel-supplied `seL4_BootInfo` instance from which
-all information necessary to 
+most information necessary to work with seL4 can derived.
 
 ```root
     let bootinfo: &'static seL4_BootInfo = unsafe { &*sel4_start::BOOTINFO };
