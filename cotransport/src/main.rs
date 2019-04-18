@@ -59,7 +59,6 @@ impl<'a, 'b> AppExt for App<'a, 'b> {
     fn add_build_params(self) -> Self {
         self.arg(
             Arg::with_name("sel4_arch")
-                .short("a")
                 .long("sel4_arch")
                 .value_name("SEL4_ARCH")
                 .required(true)
