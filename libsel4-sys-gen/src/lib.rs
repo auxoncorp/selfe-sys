@@ -12,8 +12,6 @@ extern crate std;
 #[macro_use]
 extern crate static_assertions;
 
-use core::fmt::{self, Debug};
-
 type seL4_CPtr = usize;
 type seL4_Word = usize;
 type seL4_Int8 = i8;
@@ -45,30 +43,7 @@ pub mod ctypes {
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-impl Debug for seL4_Fault {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "seL4_Fault")
-    }
-}
-
-impl Debug for seL4_MessageInfo {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "seL4_MessageInfo")
-    }
-}
-
-impl Debug for seL4_CapRights {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "seL4_CapRights")
-    }
-}
-
-impl Debug for seL4_CNode_CapData {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "seL4_CNode_CapData")
-    }
-}
-
+#[cfg(test)]
 include!(concat!(env!("OUT_DIR"), "/generated_tests.rs"));
 
 mod compile_time_assertions {

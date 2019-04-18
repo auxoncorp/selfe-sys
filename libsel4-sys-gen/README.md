@@ -48,6 +48,13 @@ from the seL4 kernel source specified in the project's relevant sel4.toml, as ma
 will depend on the configuration flags set in that sel4.toml file, as they affect
 the headers in seL4 used as input to the binding generation.
 
+The goal here is to be able to track against changes to seL4 with as little manual
+effort as reasonable.
+
+Because these bindings are intended to be zero-overhead, the output is not particularly
+Rust-idiomatic.  A notable no-cost ergonomics addition is that
+`seL4_Word` and `seL4_CPtr` have been defined to be the same as regular Rust `usize`.
+
 ## Building
 
 Default configuration is provided such that a regular `cargo build` will work

@@ -376,6 +376,19 @@ fn gen_bitfield_test(bf: &BitfieldType) -> TokenStream {
             }
         }
     });
+    let debug_impl = if is_fault {
+        quote! {}
+    } else {
+        let record_type_as_literal = proc_macro2::Literal::string(&record_type.to_string());
+        quote! {
+            #[cfg(test)]
+            impl core::fmt::Debug for #record_type {
+                fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                    write!(f, #record_type_as_literal)
+                }
+            }
+        }
+    };
 
     let mod_name = Ident::new(&format!("{}Test", name), Span::call_site());
     quote::quote! {
@@ -384,6 +397,7 @@ fn gen_bitfield_test(bf: &BitfieldType) -> TokenStream {
             use super::*;
             use proptest::prelude::*;
 
+            #debug_impl
             #param_struct_code
             #constructor_code
             #gen_params_fn_code
@@ -400,6 +414,13 @@ fn gen_tests(out_dir: &Path) {
     let bitfield_types = load_bitfields_toml();
     let test_mods_code = bitfield_types.iter().map(gen_bitfield_test);
     let top_level_code = quote! {
+        #[cfg(test)]
+        impl core::fmt::Debug for seL4_Fault {
+            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                write!(f, "seL4_Fault")
+            }
+        }
+
         #(#test_mods_code)*
     };
 
