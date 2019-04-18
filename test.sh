@@ -1,6 +1,5 @@
 set -e
 
-cd libsel4-sys-gen
 cargo test
 
 (
@@ -12,7 +11,7 @@ cargo test
 )
 
 (
-    cd example
+    cd example_application
     SEL4_PLATFORM=sabre cargo xbuild --target armv7-unknown-linux-gnueabihf
     SEL4_PLATFORM=pc99 cargo xbuild --target=x86_64-unknown-linux-gnu
 
