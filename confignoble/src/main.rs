@@ -1,4 +1,4 @@
-use clap::{crate_version, App, Arg, SubCommand};
+use clap::{crate_version, App, AppSettings, Arg, SubCommand};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
@@ -110,6 +110,7 @@ impl Execution {
             .about("builds and runs seL4 applications")
             .subcommand(SubCommand::with_name("build").add_build_params())
             .subcommand(SubCommand::with_name("simulate").add_build_params()
+                .setting(AppSettings::AllowLeadingHyphen) // needed for simulate serial overrides
                 .arg(
                     Arg::with_name("serial-override")
                         .long("serial-override")
