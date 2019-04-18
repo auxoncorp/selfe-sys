@@ -7,7 +7,7 @@ A seL4 configuration format, managed by a library.
 Direct use of this library is largely not necessary.  End users
 will usually just deal with the [toml format](#Toml-Format)
 when they need to tweak the version or compilation-options of
-the seL4 they wish to build against when using [libsel4-sys-gen](../libsel4-sys-gen/README.md)
+the seL4 they wish to build against when using [libsel4-sys-gen](../README.md)
 
 ## Library Contents
 

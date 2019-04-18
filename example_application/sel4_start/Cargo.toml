@@ -15,7 +15,7 @@ readme = "README.md"
 license = "MIT/Apache-2.0"
 
 [dependencies]
-libsel4-sys-gen = { path = ".." }
+libsel4-sys-gen = { path = "../.." }
 
 [build-dependencies]
-confignoble = { path = "../confignoble" }
+confignoble = { path = "../../confignoble" }

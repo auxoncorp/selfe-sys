@@ -5,7 +5,7 @@ authors = ["Russell Mull <russell@auxon.io>"]
 edition = "2018"
 
 [dependencies]
-sel4-start = { path = "../sel4-start" }
+sel4-start = { path = "sel4_start" }
 libsel4-sys-gen = { path = ".." }
 
 [profile.dev]

@@ -1,7 +1,7 @@
 # example
 
-An example seL4 application which uses [libsel4-sys-gen](../libsel4-sys-gen/README.md)
-to make syscalls and [sel4-start](../sel4-start/README.md) to bridge the gap between
+An example seL4 application which uses [libsel4-sys-gen](../README.md)
+to make syscalls and [sel4-start](./sel4-start/README.md) to bridge the gap between
 a bare-bones Rust `#[no_std]` application and one that will work on the seL4 microkernel.
 
 ## Highlights
@@ -55,7 +55,7 @@ SEL4_PLATFORM=pc99 cargo xbuild --target x86_64-unknown-linux-gnu
 SEL4_PLATFORM=sabre cargo xbuild --target armv7-unknown-linux-gnueabihf
 ```
 
-Alternately, you can build or run with the [cotransport](../cotransport/README.md)
+Alternately, you can build or run with the [cotransport](../confignoble/README.md)
 tool, executed from this example project's directory.
 
 ```
