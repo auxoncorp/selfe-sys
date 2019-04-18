@@ -1,9 +1,9 @@
 # under-named seL4 configuration/build libraries and tool
 
 ## Overview
-* [confignoble](confignoble) defines a seL4 configuration format (sel4.toml) and utilities for building seL4 with that config
+* [confignoble](confignoble) is a library that defines a seL4 configuration format (sel4.toml) and utilities for building seL4 with that config
+  * Also includes a binary tool for building seL4 applications with the help of a sel4.toml config file
 * [libsel4-sys-gen](libsel4-sys-gen) uses `confignoble` to build libsel4 and provide generated bindings atop it.
-* [cotransport](cotransport) is a tool for building seL4 applications with the help of a `confignoble` sel4.toml file
 * [sel4-start](sel4-start) is a library that defines Rust lang-items required for `no_std` Rust applications running on seL4.
 * [example](example) is a Rust seL4 application that depends on sel4-start for its root-task setup and libsel4-sys-gen for access to syscalls. It can be built/run independently or with `cotransport`.
 
@@ -14,7 +14,7 @@ See the READMEs of the subdirectories for more detailed explanations.
 Install the build toolchain.
 
 ```
-cargo install --git ssh://git@github.com/auxoncorp/confignoble.git cotransport --force
+cargo install --git ssh://git@github.com/auxoncorp/confignoble.git confignoble --bin cotransport --features bin --force
 cargo install cargo-xbuild
 ```
 

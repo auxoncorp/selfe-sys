@@ -4,9 +4,6 @@ use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::{env, fs};
 
-extern crate confignoble;
-
-
 use confignoble::compilation::{
     build_sel4, resolve_sel4_sources, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome,
 };
@@ -487,7 +484,11 @@ mod simulate {
         }
     }
 
-    fn toggle_flag_by_property_presence(config: &Contextualized, property: &str, flag: &str) -> String {
+    fn toggle_flag_by_property_presence(
+        config: &Contextualized,
+        property: &str,
+        flag: &str,
+    ) -> String {
         if let Some(val) = config.sel4_config.get(property) {
             match val {
                 SingleValue::Boolean(true) => format!("+{}", flag),

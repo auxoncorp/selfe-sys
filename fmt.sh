@@ -2,10 +2,6 @@ cd confignoble
 cargo fmt
 cd ..
 
-cd cotransport
-cargo fmt
-cd ..
-
 cd example
 cargo fmt
 cd ..

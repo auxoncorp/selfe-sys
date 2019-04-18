@@ -1,8 +1,28 @@
 [package]
 name = "confignoble"
-version = "0.1.0"
-authors = ["Zachary Pierce <zack@auxon.io>"]
+version = "0.2.0"
+authors = ["Russell Mull <russell@auxon.io>", "Zachary Pierce <zack@auxon.io>"]
 edition = "2018"
+
+[features]
+default = []
+bin = ["clap"]
+
+[lib]
+name = "confignoble"
+path = "src/lib.rs"
+
+[[bin]]
+name = "cotransport"
+path = "src/main.rs"
+doctest = false
+required-features = ["bin"]
+
 
 [dependencies]
 toml = "0.5"
+
+[dependencies.clap]
+version = "2.33.0"
+default-features = false
+optional = true
