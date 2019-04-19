@@ -7,12 +7,12 @@ extern crate toml;
 extern crate bindgen;
 use bindgen::Builder;
 
-extern crate confignoble;
-use confignoble::build_helpers::*;
-use confignoble::compilation::{
+extern crate selfe_config;
+use selfe_config::build_helpers::*;
+use selfe_config::compilation::{
     build_sel4, resolve_sel4_sources, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome,
 };
-use confignoble::model::{self, Arch, SeL4Arch};
+use selfe_config::model::{self, Arch, SeL4Arch};
 
 extern crate proc_macro2;
 use proc_macro2::{Ident, Span, TokenStream};

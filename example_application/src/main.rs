@@ -5,7 +5,7 @@ use core::panic::PanicInfo;
 
 use core::fmt::Write;
 use sel4_start::{self, DebugOutHandle};
-use sel4_sys::{seL4_BootInfo, seL4_CapInitThreadTCB, seL4_TCB_Suspend};
+use selfe_sys::{seL4_BootInfo, seL4_CapInitThreadTCB, seL4_TCB_Suspend};
 
 fn main() {
     #[cfg(target_arch = "arm")]

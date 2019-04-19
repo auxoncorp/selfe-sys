@@ -1,4 +1,4 @@
-# confignoble
+# selfe-config
 
 A seL4 configuration format, managed by a library.
 
@@ -7,7 +7,7 @@ A seL4 configuration format, managed by a library.
 Direct use of this library is largely not necessary.  End users
 will usually just deal with the [toml format](#Toml-Format)
 when they need to tweak the version or compilation-options of
-the seL4 they wish to build against when using [libsel4-sys-gen](../README.md)
+the seL4 they wish to build against when using [selfe-sys](../README.md)
 
 ## Library Contents
 
@@ -30,7 +30,7 @@ to apply their sel4.toml configuration as Rust compile-time feature flags to imp
 
 In build.rs:
 ```
-use confignoble::build_helpers::*;
+use selfe_config::build_helpers::*;
 
 fn main() {
     /// Rerun this build script if any of the config-driving environment variables change
@@ -108,7 +108,7 @@ cross_compiler_prefix = "arm-linux-gnueabihf-"
 # platform and build profile  like [build.PLATFORM.debug]
 # and [build.PLATFORM.release]
 #
-# These properties are used by the cotransport build tool in particular,
+# These properties are used by the selfe build tool in particular,
 # and are not relevant for libraries.
 [build.sabre.debug]
 make_root_task = "cargo xbuild --target=armv7-unknown-linux-gnueabihf"
@@ -122,11 +122,11 @@ make_root_task = "cargo xbuild --target=armv7-unknown-linux-gnueabihf --release"
 root_task_image = "target/armv7-unknown-linux-gnueabihf/release/example"
 ```
 
-## binary tool
+## selfe
 
-A seL4 application build and simulation tool.
+A build and simulation tool for seL4 applications.
 
-This tool's job is to orchestrate the construction of seL4 applications.
+The `selfe` tool's job is to orchestrate the construction of seL4 applications.
 
 It uses a sel4.toml file sitting in a project's root dir to establish a canonical configuration
 source and pipes that configuration, along with explicit output platform expectations

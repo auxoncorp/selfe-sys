@@ -1,6 +1,6 @@
 # example
 
-An example seL4 application which uses [libsel4-sys-gen](../README.md)
+An example seL4 application which uses [selfe-sys](../README.md)
 to make syscalls and [sel4-start](./sel4-start/README.md) to bridge the gap between
 a bare-bones Rust `#[no_std]` application and one that will work on the seL4 microkernel.
 
@@ -24,7 +24,7 @@ Note also the presence of a selected linker to support the cross-compilation-for
 use case.
 
 ### Dependencies
-Note that `libsel4-sys-gen` and `sel4-start` are included as regular Cargo.toml dependencies.
+Note that `selfe-sys` and `sel4-start` are included as regular Cargo.toml dependencies.
 
 ### Language Items
 
@@ -55,14 +55,14 @@ SEL4_PLATFORM=pc99 cargo xbuild --target x86_64-unknown-linux-gnu
 SEL4_PLATFORM=sabre cargo xbuild --target armv7-unknown-linux-gnueabihf
 ```
 
-Alternately, you can build or run with the [cotransport](../confignoble/README.md)
+Alternately, you can build or run with the [selfe](../selfe-config/README.md)
 tool, executed from this example project's directory.
 
 ```
-cotransport build --sel4_arch x86_64 --platform pc99 --debug
-cotransport build --sel4_arch x86_64 --platform pc99 --release
+selfe build --sel4_arch x86_64 --platform pc99 --debug
+selfe build --sel4_arch x86_64 --platform pc99 --release
 
-cotransport build --sel4_arch aarch32 --platform sabre
+selfe build --sel4_arch aarch32 --platform sabre
 
-cotransport simulate --sel4_arch aarch32 --platform sabre
+selfe simulate --sel4_arch aarch32 --platform sabre
 ```

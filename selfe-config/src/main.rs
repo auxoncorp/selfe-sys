@@ -4,10 +4,10 @@ use std::process::{Command, Stdio};
 use std::str::FromStr;
 use std::{env, fs};
 
-use confignoble::compilation::{
+use selfe_config::compilation::{
     build_sel4, resolve_sel4_sources, ResolvedSeL4Source, SeL4BuildMode, SeL4BuildOutcome,
 };
-use confignoble::model::{Arch, Platform, SeL4Arch};
+use selfe_config::model::{Arch, Platform, SeL4Arch};
 
 /// Walk up the directory tree from `start_dir`, looking for "sel4.toml"
 fn find_sel4_toml(start_dir: &Path) -> Option<PathBuf> {
@@ -105,7 +105,7 @@ impl<'a, 'b> AppExt for App<'a, 'b> {
 impl Execution {
     fn get_or_run_help() -> Self {
         // TODO - naming / piping / phrasing
-        let mut app = App::new("cotransport")
+        let mut app = App::new("selfe")
             .version(crate_version!())
             .about("builds and runs seL4 applications")
             .subcommand(SubCommand::with_name("build").add_build_params())
@@ -215,7 +215,7 @@ fn build_kernel(
     build_params: &BuildParams,
 ) -> (
     SeL4BuildOutcome,
-    confignoble::model::contextualized::Contextualized,
+    selfe_config::model::contextualized::Contextualized,
 ) {
     let is_debug = build_params.is_debug;
     let pwd = &env::current_dir().unwrap();
@@ -231,7 +231,7 @@ fn build_kernel(
     let config_content = fs::read_to_string(&config_file_path)
         .unwrap_or_else(|_| panic!("Can't read config file: {}", config_file_path.display()));
 
-    let config = confignoble::model::contextualized::Contextualized::from_str(
+    let config = selfe_config::model::contextualized::Contextualized::from_str(
         &config_content,
         build_params
             .arch
@@ -322,8 +322,8 @@ fn print_kernel_paths(outcome: &SeL4BuildOutcome) {
 
 mod simulate {
     use crate::SimulateParams;
-    use confignoble::model::contextualized::Contextualized;
-    use confignoble::model::SingleValue;
+    use selfe_config::model::contextualized::Contextualized;
+    use selfe_config::model::SingleValue;
     use std::path::{Path, PathBuf};
     use std::process::{Command, Stdio};
 

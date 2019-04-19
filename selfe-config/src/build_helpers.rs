@@ -113,7 +113,7 @@ pub fn load_config_from_env_or_default() -> model::contextualized::Contextualize
             )
         })
         .unwrap_or_else(|| {
-            println!("Using default config content in libsel4-sys-gen");
+            println!("Using default config content");
             (model::get_default_config(), None)
         });
 

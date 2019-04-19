@@ -1,4 +1,4 @@
-use confignoble::model::*;
+use selfe_config::model::*;
 use std::collections::btree_map::BTreeMap;
 use std::path::PathBuf;
 

@@ -1,6 +1,6 @@
 cargo fmt 
 
-cd confignoble
+cd selfe-config
 cargo fmt
 cd ..
 

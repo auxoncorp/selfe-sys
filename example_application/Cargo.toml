@@ -1,12 +1,12 @@
 [package]
 name = "example"
 version = "0.1.0"
-authors = ["Russell Mull <russell@auxon.io>"]
+authors = ["Russell Mull <russell@auxon.io>", "Zachary Pierce <zack@auxon.io>"]
 edition = "2018"
 
 [dependencies]
-sel4-start = { path = "sel4_start" }
-libsel4-sys-gen = { path = ".." }
+sel4-start = { path = "sel4-start" }
+selfe-sys = { path = ".." }
 
 [profile.dev]
 panic = "abort"

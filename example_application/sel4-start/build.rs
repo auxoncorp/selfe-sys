@@ -1,5 +1,5 @@
-extern crate confignoble;
-use confignoble::build_helpers::*;
+extern crate selfe_config;
+use selfe_config::build_helpers::*;
 
 fn main() {
     BuildEnv::request_reruns();

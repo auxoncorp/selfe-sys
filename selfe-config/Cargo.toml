@@ -1,5 +1,5 @@
 [package]
-name = "confignoble"
+name = "selfe-config"
 version = "0.2.0"
 authors = ["Russell Mull <russell@auxon.io>", "Zachary Pierce <zack@auxon.io>"]
 edition = "2018"
@@ -9,11 +9,11 @@ default = []
 bin = ["clap"]
 
 [lib]
-name = "confignoble"
+name = "selfe_config"
 path = "src/lib.rs"
 
 [[bin]]
-name = "cotransport"
+name = "selfe"
 path = "src/main.rs"
 doctest = false
 required-features = ["bin"]

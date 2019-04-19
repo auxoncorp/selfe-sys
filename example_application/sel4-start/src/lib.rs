@@ -15,13 +15,13 @@
     feature(global_asm)
 )]
 
-extern crate sel4_sys;
+extern crate selfe_sys;
 
 #[cfg(not(test))]
 use core::alloc::Layout;
 use core::fmt::{self, Write};
 use core::panic::PanicInfo;
-use sel4_sys::*;
+use selfe_sys::*;
 
 #[repr(align(4096))]
 #[doc(hidden)]
