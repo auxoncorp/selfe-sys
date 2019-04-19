@@ -17,7 +17,7 @@ Add a dependency to this library in your Cargo.toml manifest:
 
 ```toml
 [dependencies]
-selfe-sys = { git = "ssh://git@github.com/auxoncorp/selfe-config.git" }
+selfe-sys = { git = "ssh://git@github.com/auxoncorp/selfe-sys.git" }
 ```
 
 And then in your Rust project:

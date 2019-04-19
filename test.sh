@@ -13,9 +13,6 @@ cargo test
 (
     cd example_application
     SEL4_PLATFORM=sabre cargo xbuild --target armv7-unknown-linux-gnueabihf
-
-    cargo clean
-
     SEL4_PLATFORM=pc99 cargo xbuild --target=x86_64-unknown-linux-gnu
 
     ../selfe-config/target/debug/selfe build --sel4_arch x86_64 --platform pc99 --debug
