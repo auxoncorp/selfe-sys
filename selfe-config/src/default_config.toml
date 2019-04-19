@@ -4,7 +4,7 @@ tools = { git = "https://github.com/seL4/seL4_tools" , branch = "10.1.x-compatib
 util_libs  = { git = "https://github.com/seL4/util_libs" , rev = "2c4524ce84652960cda127a8b0ae6690022988ee" }
 
 [sel4.config]
-KernelRetypeFanOutLimit = 256
+KernelRetypeFanOutLimit = 16384
 
 [sel4.config.x86_64]
 KernelArch = 'x86'
