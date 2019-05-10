@@ -11,7 +11,7 @@
 #![no_std]
 #![feature(lang_items, core_intrinsics, asm, naked_functions)]
 #![cfg_attr(
-    all(target_arch = "arm", target_pointer_width = "32"),
+    any(all(target_arch = "arm", target_pointer_width = "32"), target_arch = "aarch64"),
     feature(global_asm)
 )]
 
@@ -142,6 +142,9 @@ include!("x86_64.rs");
 
 #[cfg(all(target_arch = "arm", target_pointer_width = "32"))]
 include!("arm.rs");
+
+#[cfg(target_arch = "aarch64")]
+include!("arm64.rs");
 
 /////////////////////////////////////////////////////////////////////////////////////
 // libsel4.a contains code that depends on __assert fail and strcp. Since you      //
