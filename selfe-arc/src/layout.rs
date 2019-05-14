@@ -14,18 +14,18 @@ pub enum ReadError {
 }
 
 /// because try_from is only implemented for slices up to length 32
-fn u8_slice_to_array_256(slice: &[u8]) -> Option<[u8; 256]> {
-    if slice.len() != 256 {
+fn u8_slice_to_array_255(slice: &[u8]) -> Option<[u8; FILE_NAME_BYTES]> {
+    if slice.len() != FILE_NAME_BYTES {
         None
     } else {
-        let ptr = slice.as_ptr() as *const [u8; 256];
+        let ptr = slice.as_ptr() as *const [u8; FILE_NAME_BYTES];
         Some(unsafe { *ptr })
     }
 }
 
 /// Checked versions of the relevant byteorder read functions
 mod read {
-    use super::{u8_slice_to_array_256, ReadError};
+    use super::{u8_slice_to_array_255, ReadError, FILE_NAME_BYTES};
     use byteorder::{ByteOrder, LittleEndian};
     use core::convert::TryInto;
 
@@ -61,12 +61,12 @@ mod read {
         }
     }
 
-    pub(super) fn read_256_bytes(buf: &[u8]) -> Result<[u8; 256], ReadError> {
-        if buf.len() < 256 {
+    pub(super) fn read_file_name_bytes(buf: &[u8]) -> Result<[u8; FILE_NAME_BYTES], ReadError> {
+        if buf.len() < FILE_NAME_BYTES {
             Err(ReadError::BufferTooShort)
         } else {
-            let slice = &buf[0..256];
-            Ok(u8_slice_to_array_256(&slice).unwrap())
+            let slice = &buf[0..FILE_NAME_BYTES];
+            Ok(u8_slice_to_array_255(&slice).unwrap())
         }
     }
 }
@@ -95,6 +95,9 @@ pub fn align_addr(a: u64) -> u64 {
         a + ALIGNMENT - low_bits
     }
 }
+
+/// The number of bytes in the directory entry name_bytes field
+pub const FILE_NAME_BYTES: usize = 255;
 
 ///////////////////
 // ArchiveHeader //
@@ -167,7 +170,7 @@ pub struct DirectoryEntry {
     pub name_len: u8,
 
     /// The bytes of the file name, UTF-8 encoded.
-    pub name_bytes: [u8; 256],
+    pub name_bytes: [u8; FILE_NAME_BYTES],
 
     /// The location of the file, as an offset from header.data_start.
     /// 4k-aligned.
@@ -181,7 +184,7 @@ impl Default for DirectoryEntry {
     fn default() -> DirectoryEntry {
         DirectoryEntry {
             name_len: 0,
-            name_bytes: [0; 256],
+            name_bytes: [0; FILE_NAME_BYTES],
             offset: 0,
             length: 0,
         }
@@ -220,7 +223,7 @@ impl Eq for DirectoryEntry {}
 impl DirectoryEntry {
     pub const fn serialized_size() -> usize {
         mem::size_of::<u8>() // name_len
-            + mem::size_of::<[u8;256]>() // name_bytes
+            + mem::size_of::<[u8; FILE_NAME_BYTES]>() // name_bytes
             + mem::size_of::<u64>() // offset
             + mem::size_of::<u64>() // length
     }
@@ -240,8 +243,8 @@ impl DirectoryEntry {
         entry.name_len = read::read_u8(buf)?;
         buf = &buf[1..];
 
-        entry.name_bytes = read::read_256_bytes(buf)?;
-        buf = &buf[256..];
+        entry.name_bytes = read::read_file_name_bytes(buf)?;
+        buf = &buf[FILE_NAME_BYTES..];
 
         entry.offset = read::read_u64(buf)?;
         buf = &buf[8..];
@@ -292,10 +295,8 @@ mod tests {
     fn directory_entry_layout() {
         #[rustfmt::skip]
         let expected = vec!(
-            // name length
-            0x04,
-            // name
-            0x74, 0x65, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            // len, name
+            0x04, 0x74, 0x65, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -319,7 +320,7 @@ mod tests {
 
         let mut entry = DirectoryEntry {
             name_len: 0,
-            name_bytes: [0; 256],
+            name_bytes: [0; FILE_NAME_BYTES],
             offset: 0x2000,
             length: 0x4000,
         };
@@ -354,15 +355,15 @@ mod tests {
 
     fn gen_directory_entry() -> impl Strategy<Value = DirectoryEntry> {
         (
-            num::u8::ANY,                            // name_len
-            collection::vec(num::u8::ANY, 256..257), // name_bytes
-            num::u64::ANY,                           // offset
+            num::u8::ANY,                                   // name_len
+            collection::vec(num::u8::ANY, FILE_NAME_BYTES), // name_bytes
+            num::u64::ANY,                                  // offset
             num::u64::ANY,
         ) // length
             .prop_map(
                 |(name_len, name_bytes_vec, offset, length)| DirectoryEntry {
                     name_len,
-                    name_bytes: u8_slice_to_array_256(&name_bytes_vec).unwrap(),
+                    name_bytes: u8_slice_to_array_255(&name_bytes_vec).unwrap(),
                     offset,
                     length,
                 },
@@ -409,7 +410,7 @@ mod tests {
 
             let deser = DirectoryEntry::read(&ser);
             prop_assert!(deser.is_ok());
-            prop_assert_eq!(header, deser.unwrap());
+            prop_assert_eq!(dir_entry, deser.unwrap());
         }
     }
 }

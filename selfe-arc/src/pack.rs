@@ -81,7 +81,7 @@ impl Archive {
             assert_eq!(data_cursor & 0xfff, 0);
 
             let name = f.name.as_bytes();
-            if name.len() > 256 {
+            if name.len() > layout::FILE_NAME_BYTES {
                 return Err(ArchiveWriteError::FileNameTooLong(f.name.to_owned()));
             }
 
@@ -90,7 +90,7 @@ impl Archive {
 
             let mut dir_entry = layout::DirectoryEntry {
                 name_len: name.len() as u8,
-                name_bytes: [0; 256],
+                name_bytes: [0; layout::FILE_NAME_BYTES],
                 offset: data_cursor,
                 length: file_size,
             };
@@ -187,10 +187,8 @@ mod tests {
         // DIRECTORY ENTRY 1/1
         #[rustfmt::skip]
         expected_data.append(&mut vec!(
-            // name length
-            0x04,
-            // name
-            0x74, 0x65, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            // len, name
+            0x04, 0x74, 0x65, 0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -218,7 +216,7 @@ mod tests {
         );
 
         // PADDING
-        expected_data.append(&mut [0u8;3806].to_vec());
+        expected_data.append(&mut [0u8;3807].to_vec());
 
         // FILE 1/1
         expected_data.append(&mut vec!(

@@ -144,7 +144,7 @@ mod tests {
         max_file_size: usize,
     ) -> impl Strategy<Value = (String, TempPath)> {
         (
-            ".{0,256}".prop_filter("string is too long", move |s| {
+            ".{0,255}".prop_filter("string is too long", move |s| {
                 s.bytes().len() <= max_name_size
             }),
             collection::vec(num::u8::ANY, 0..max_file_size),
@@ -199,8 +199,7 @@ mod tests {
             cases: 30, .. ProptestConfig::default()
         })]
         #[test]
-        fn write_and_read_small_files(files in collection::vec(gen_test_file(255, 0x4000), 1..10)) {
-            // TODO ^^^ try 256 ^^^
+        fn write_and_read_small_files(files in collection::vec(gen_test_file(layout::FILE_NAME_BYTES, 0x4000), 1..10)) {
             files_should_round_trip(files)?
         }
     }
@@ -212,7 +211,7 @@ mod tests {
             cases: 5, .. ProptestConfig::default()
         })]
         #[test]
-        fn write_and_read_large_files(files in collection::vec(gen_test_file(255, 0x4000000), 1..10)) {
+        fn write_and_read_large_files(files in collection::vec(gen_test_file(layout::FILE_NAME_BYTES, 0x4000000), 1..10)) {
             files_should_round_trip(files)?
         }
     }
