@@ -1,5 +1,5 @@
-use core::{fmt, str};
 use core::mem;
+use core::{fmt, str};
 
 #[cfg(feature = "std")]
 use byteorder::{LittleEndian, WriteBytesExt};
@@ -14,18 +14,9 @@ pub enum ReadError {
 }
 
 /// because try_from is only implemented for slices up to length 32
-fn u8_slice_to_array_255(slice: &[u8]) -> Option<[u8; FILE_NAME_BYTES]> {
-    if slice.len() != FILE_NAME_BYTES {
-        None
-    } else {
-        let ptr = slice.as_ptr() as *const [u8; FILE_NAME_BYTES];
-        Some(unsafe { *ptr })
-    }
-}
-
 /// Checked versions of the relevant byteorder read functions
 mod read {
-    use super::{u8_slice_to_array_255, ReadError, FILE_NAME_BYTES};
+    use super::{ReadError, FILE_NAME_BYTES};
     use byteorder::{ByteOrder, LittleEndian};
     use core::convert::TryInto;
 
@@ -66,7 +57,8 @@ mod read {
             Err(ReadError::BufferTooShort)
         } else {
             let slice = &buf[0..FILE_NAME_BYTES];
-            Ok(u8_slice_to_array_255(&slice).unwrap())
+            let ptr = slice.as_ptr() as *const [u8; FILE_NAME_BYTES];
+            Ok(unsafe { *ptr })
         }
     }
 }
@@ -353,6 +345,11 @@ mod tests {
             })
     }
 
+    fn name_slice_to_array(slice: &[u8]) -> [u8; FILE_NAME_BYTES] {
+        let ptr = slice.as_ptr() as *const [u8; FILE_NAME_BYTES];
+        unsafe { *ptr }
+    }
+
     fn gen_directory_entry() -> impl Strategy<Value = DirectoryEntry> {
         (
             num::u8::ANY,                                   // name_len
@@ -363,7 +360,7 @@ mod tests {
             .prop_map(
                 |(name_len, name_bytes_vec, offset, length)| DirectoryEntry {
                     name_len,
-                    name_bytes: u8_slice_to_array_255(&name_bytes_vec).unwrap(),
+                    name_bytes: name_slice_to_array(&name_bytes_vec),
                     offset,
                     length,
                 },
