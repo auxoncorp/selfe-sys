@@ -251,7 +251,7 @@ impl DirectoryEntry {
         Ok(entry)
     }
 
-    pub fn name<'a>(&'a self) -> Result<&'a str, core::str::Utf8Error> {
+    pub fn name(&self) -> Result<&str, core::str::Utf8Error> {
         str::from_utf8(&self.name_bytes[0..self.name_len as usize])
     }
 }
