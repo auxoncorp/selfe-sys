@@ -37,7 +37,7 @@ impl std::convert::From<io::Error> for ArchiveWriteError {
 #[derive(Debug, Eq, PartialEq)]
 pub enum AddFileError {
     EmptyNameNotAllowed,
-    NameConflict
+    NameConflict,
 }
 
 impl Archive {
@@ -169,7 +169,6 @@ impl Archive {
 mod tests {
     use super::*;
 
-
     #[test]
     fn no_empty_name() {
         let mut ar = Archive::new();
@@ -200,7 +199,8 @@ mod tests {
         }
 
         let mut ar = Archive::new();
-        ar.add_file("test", Path::new("/tmp/pack_test.txt")).unwrap();
+        ar.add_file("test", Path::new("/tmp/pack_test.txt"))
+            .unwrap();
 
         let mut actual_data = Vec::new();
         {
@@ -259,20 +259,28 @@ mod tests {
         );
 
         // PADDING
-        expected_data.append(&mut [0u8;3807].to_vec());
+        expected_data.append(&mut [0u8; 3807].to_vec());
 
         // FILE 1/1
-        expected_data.append(&mut vec!(
-            0x74, 0x65, 0x73, 0x74
-        ));
+        expected_data.append(&mut vec![0x74, 0x65, 0x73, 0x74]);
 
         // double check file data alignment
-        assert_eq!(expected_data.clone().into_iter().skip(0x1000).collect::<Vec<u8>>(),
-                   vec!(0x74, 0x65, 0x73, 0x74));
+        assert_eq!(
+            expected_data
+                .clone()
+                .into_iter()
+                .skip(0x1000)
+                .collect::<Vec<u8>>(),
+            vec!(0x74, 0x65, 0x73, 0x74)
+        );
 
         assert_eq!(expected_data.len(), actual_data.len());
         for (i, (e, a)) in expected_data.iter().zip(actual_data.iter()).enumerate() {
-            assert_eq!(e, a, "At byte {:#x}, expected {:#04x} but got {:#04x}", i, e, a);
+            assert_eq!(
+                e, a,
+                "At byte {:#x}, expected {:#04x} but got {:#04x}",
+                i, e, a
+            );
         }
     }
 }
