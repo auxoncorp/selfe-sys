@@ -11,7 +11,7 @@ pub enum ReadError {
     LayoutError(layout::ReadError),
 }
 
-impl std::convert::From<layout::ReadError> for ReadError {
+impl core::convert::From<layout::ReadError> for ReadError {
     fn from(e: layout::ReadError) -> ReadError {
         ReadError::LayoutError(e)
     }
@@ -86,12 +86,12 @@ impl<'a> Archive<'a> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod tests {
     use super::*;
     use crate::pack;
     use proptest::prelude::*;
-    use proptest::{arbitrary, array, collection, num};
+    use proptest::{collection, num};
     use std::collections::HashSet;
     use std::io::{Read, Write};
     use std::path::Path;

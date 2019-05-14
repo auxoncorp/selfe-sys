@@ -11,8 +11,11 @@ byteorder = "1"
 version = "4"
 default-features = false
 
-
 [dev-dependencies]
 proptest = "0.9.3"
 proptest-derive = "0.1.0"
 tempfile = "3"
+
+[features]
+default = ["std"]
+std = []

@@ -1,3 +1,5 @@
 pub mod layout;
-pub mod pack;
 pub mod read;
+
+#[cfg(feature = "std")]
+pub mod pack;

@@ -1,5 +1,7 @@
-use byteorder::{LittleEndian, WriteBytesExt};
 use core::{fmt, str};
+
+#[cfg(feature = "std")]
+use byteorder::{LittleEndian, WriteBytesExt};
 
 ////////////////
 // Read Utils //
@@ -24,7 +26,7 @@ fn u8_slice_to_array_256(slice: &[u8]) -> Option<[u8; 256]> {
 mod read {
     use super::{u8_slice_to_array_256, ReadError};
     use byteorder::{ByteOrder, LittleEndian};
-    use std::convert::TryInto;
+    use core::convert::TryInto;
 
     pub(super) fn read_u8(buf: &[u8]) -> Result<u8, ReadError> {
         if buf.len() < 1 {
@@ -129,6 +131,7 @@ impl ArchiveHeader {
         8 + 1 + 4 + 4
     }
 
+    #[cfg(feature = "std")]
     pub fn write<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
         writer.write(&self.magic)?;
         writer.write_u8(self.version)?;
@@ -214,6 +217,7 @@ impl DirectoryEntry {
         1 + 256 + 8 + 8
     }
 
+    #[cfg(feature = "std")]
     pub fn write<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
         writer.write_u8(self.name_len)?;
         writer.write(&self.name_bytes)?;
@@ -244,7 +248,7 @@ impl DirectoryEntry {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod tests {
     use super::*;
     use proptest::prelude::*;
