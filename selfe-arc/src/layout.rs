@@ -75,8 +75,8 @@ mod read {
 // Constants //
 ///////////////
 
-/// The selfarc magic number
-pub const MAGIC: &[u8; 8] = b"selfarc!";
+/// The selfe-arc magic number
+pub const MAGIC: &[u8; 8] = b"selfearc";
 
 /// The file format version
 pub const VERSION_1: u8 = 1;
@@ -270,7 +270,7 @@ mod tests {
         #[rustfmt::skip]
         let expected = vec!(
             // magic
-            0x73, 0x65, 0x6c, 0x66, 0x61, 0x72, 0x63, 0x21,
+            0x73, 0x65, 0x6c, 0x66, 0x65, 0x61, 0x72, 0x63,
             // version
             0x01,
             // data_start
