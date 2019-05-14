@@ -403,9 +403,9 @@ mod tests {
         }
 
         #[test]
-        fn directory_entry_round_trip(header in gen_directory_entry()) {
+        fn directory_entry_round_trip(dir_entry in gen_directory_entry()) {
             let mut ser = vec!();
-            prop_assert!(header.write(&mut ser).is_ok());
+            prop_assert!(dir_entry.write(&mut ser).is_ok());
 
             let deser = DirectoryEntry::read(&ser);
             prop_assert!(deser.is_ok());
