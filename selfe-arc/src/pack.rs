@@ -47,8 +47,8 @@ impl Archive {
     }
 
     pub fn write<W: Write>(&self, mut writer: &mut W) -> Result<(), ArchiveWriteError> {
-        let header_size = layout::ArchiveHeader::size();
-        let dir_entry_size = layout::DirectoryEntry::size();
+        let header_size = layout::ArchiveHeader::serialized_size();
+        let dir_entry_size = layout::DirectoryEntry::serialized_size();
 
         let file_count =
             u32::try_from(self.files.len()).map_err(|_| ArchiveWriteError::HeaderTooLarge)?;
@@ -179,7 +179,10 @@ mod tests {
             0x01, 0x00, 0x00, 0x00,
         ));
 
-        assert_eq!(expected_data.len(), layout::ArchiveHeader::size());
+        assert_eq!(
+            expected_data.len(),
+            layout::ArchiveHeader::serialized_size()
+        );
 
         // DIRECTORY ENTRY 1/1
         #[rustfmt::skip]
@@ -209,7 +212,10 @@ mod tests {
             0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ));
 
-        assert_eq!(expected_data.len(), layout::ArchiveHeader::size() + layout::DirectoryEntry::size());
+        assert_eq!(
+            expected_data.len(),
+            layout::ArchiveHeader::serialized_size() + layout::DirectoryEntry::serialized_size()
+        );
 
         // PADDING
         expected_data.append(&mut [0u8;3806].to_vec());

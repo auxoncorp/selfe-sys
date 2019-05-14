@@ -29,7 +29,7 @@ impl<'a> Iterator for DirectoryEntryIterator<'a> {
         if self.remaining_files > 0 {
             let entry = DirectoryEntry::read(&self.data);
             self.remaining_files = self.remaining_files - 1;
-            self.data = &self.data[DirectoryEntry::size()..];
+            self.data = &self.data[DirectoryEntry::serialized_size()..];
             Some(entry)
         } else {
             None
@@ -61,7 +61,7 @@ impl<'a> Archive<'a> {
         let header = self.header()?;
         Ok(DirectoryEntryIterator {
             remaining_files: header.file_count as usize,
-            data: &self.0[ArchiveHeader::size()..],
+            data: &self.0[ArchiveHeader::serialized_size()..],
         })
     }
 

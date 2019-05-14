@@ -1,4 +1,5 @@
 use core::{fmt, str};
+use core::mem;
 
 #[cfg(feature = "std")]
 use byteorder::{LittleEndian, WriteBytesExt};
@@ -127,8 +128,11 @@ impl Default for ArchiveHeader {
 }
 
 impl ArchiveHeader {
-    pub const fn size() -> usize {
-        8 + 1 + 4 + 4
+    pub const fn serialized_size() -> usize {
+        mem::size_of::<[u8;8]>() // magic
+            + mem::size_of::<u8>() // version
+            + mem::size_of::<u32>() // data_start
+            + mem::size_of::<u32>() // file_count
     }
 
     #[cfg(feature = "std")]
@@ -210,11 +214,15 @@ impl PartialEq for DirectoryEntry {
             && (self.length == other.length)
     }
 }
+
 impl Eq for DirectoryEntry {}
 
 impl DirectoryEntry {
-    pub const fn size() -> usize {
-        1 + 256 + 8 + 8
+    pub const fn serialized_size() -> usize {
+        mem::size_of::<u8>() // name_len
+            + mem::size_of::<[u8;256]>() // name_bytes
+            + mem::size_of::<u64>() // offset
+            + mem::size_of::<u64>() // length
     }
 
     #[cfg(feature = "std")]
