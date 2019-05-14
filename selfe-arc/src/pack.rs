@@ -34,16 +34,32 @@ impl std::convert::From<io::Error> for ArchiveWriteError {
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
+pub enum AddFileError {
+    EmptyNameNotAllowed,
+    NameConflict
+}
+
 impl Archive {
     pub fn new() -> Archive {
         Archive { files: vec![] }
     }
 
-    pub fn add_file(&mut self, name: &str, path: &Path) {
+    pub fn add_file(&mut self, name: &str, path: &Path) -> Result<(), AddFileError> {
+        if name.is_empty() {
+            return Err(AddFileError::EmptyNameNotAllowed);
+        }
+
+        if self.files.iter().find(|f| f.name == name).is_some() {
+            return Err(AddFileError::NameConflict);
+        }
+
         self.files.push(File {
             name: name.to_owned(),
             path: path.to_owned(),
         });
+
+        Ok(())
     }
 
     pub fn write<W: Write>(&self, mut writer: &mut W) -> Result<(), ArchiveWriteError> {
@@ -153,6 +169,29 @@ impl Archive {
 mod tests {
     use super::*;
 
+
+    #[test]
+    fn no_empty_name() {
+        let mut ar = Archive::new();
+        let res = ar.add_file("", Path::new("doesn't_matter"));
+        assert_eq!(res, Err(AddFileError::EmptyNameNotAllowed));
+    }
+
+    #[test]
+    fn no_duplicate_name() {
+        {
+            let mut test_file = fs::File::create("/tmp/pack_test.txt").unwrap();
+            test_file.write_all(b"test").unwrap();
+        }
+
+        let mut ar = Archive::new();
+        let res = ar.add_file("test", Path::new("/tmp/pack_test.txt"));
+        assert_eq!(res, Ok(()));
+
+        let res = ar.add_file("test", Path::new("doesn't_matter"));
+        assert_eq!(res, Err(AddFileError::NameConflict));
+    }
+
     #[test]
     fn pack_files() {
         {
@@ -161,7 +200,7 @@ mod tests {
         }
 
         let mut ar = Archive::new();
-        ar.add_file("test", Path::new("/tmp/pack_test.txt"));
+        ar.add_file("test", Path::new("/tmp/pack_test.txt")).unwrap();
 
         let mut actual_data = Vec::new();
         {
