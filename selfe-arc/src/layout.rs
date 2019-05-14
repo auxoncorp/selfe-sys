@@ -82,12 +82,12 @@ pub const MAGIC: &[u8; 8] = b"selfearc";
 pub const VERSION_1: u8 = 1;
 
 /// Where to align file data
-pub const ALIGNMENT: u64 = 0x1000;
+pub const ALIGNMENT: u32 = 0x1000;
 
 /// The mask for aligning file addresses.
-pub const ALIGNMENT_MASK: u64 = ALIGNMENT - 1;
+pub const ALIGNMENT_MASK: u32 = ALIGNMENT - 1;
 
-pub fn align_addr(a: u64) -> u64 {
+pub fn align_addr(a: u32) -> u32 {
     let low_bits = a & ALIGNMENT_MASK;
     if low_bits == 0 {
         a

@@ -52,15 +52,17 @@ impl Archive {
 
         let file_count =
             u32::try_from(self.files.len()).map_err(|_| ArchiveWriteError::HeaderTooLarge)?;
-        let dir_size = file_count
-            .checked_mul(dir_entry_size as u32)
+        let dir_size: u32 = file_count
+            .checked_mul(
+                u32::try_from(dir_entry_size).map_err(|_| ArchiveWriteError::HeaderTooLarge)?,
+            )
             .ok_or(ArchiveWriteError::HeaderTooLarge)?;
-        let data_start = dir_size
-            .checked_add(header_size as u32)
+        let data_start: u32 = dir_size
+            .checked_add(u32::try_from(header_size).map_err(|_| ArchiveWriteError::HeaderTooLarge)?)
             .ok_or(ArchiveWriteError::HeaderTooLarge)?;
 
         // page align data_start
-        let data_start = layout::align_addr(data_start as u64) as u32;
+        let data_start = layout::align_addr(data_start);
         let initial_padding_size = data_start - (dir_size + header_size as u32);
 
         // header
@@ -107,7 +109,9 @@ impl Archive {
             let padding = if is_last {
                 0
             } else {
-                layout::ALIGNMENT - (file_size & layout::ALIGNMENT_MASK)
+                let alignment: u64 = layout::ALIGNMENT.into();
+                let mask: u64 = layout::ALIGNMENT_MASK.into();
+                alignment - (file_size & mask)
             };
 
             scheduled_files.push(ScheduledFile {
