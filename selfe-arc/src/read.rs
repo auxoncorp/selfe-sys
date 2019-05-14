@@ -78,7 +78,6 @@ impl<'a> Archive<'a> {
         }
 
         let dir_entry = dir_entry.ok_or_else(|| ReadError::FileNotFound)?;
-        println!("found entry: {:?}", dir_entry);
         let header = self.header()?;
         let data_slice = &self.0[header.data_start as usize..];
         Ok(&data_slice
@@ -104,8 +103,8 @@ mod tests {
 
         {
             let mut ar = pack::Archive::new();
-            ar.add_file("lib.rs", Path::new("./src/lib.rs"));
-            ar.add_file("pack.rs", Path::new("./src/pack.rs"));
+            ar.add_file("lib.rs", Path::new("./src/lib.rs")).unwrap();
+            ar.add_file("pack.rs", Path::new("./src/pack.rs")).unwrap();
 
             let mut writer = io::BufWriter::new(&mut data);
             ar.write(&mut writer).unwrap();
@@ -144,7 +143,7 @@ mod tests {
         max_file_size: usize,
     ) -> impl Strategy<Value = (String, TempPath)> {
         (
-            ".{0,255}".prop_filter("string is too long", move |s| {
+            ".{1,255}".prop_filter("string is too long", move |s| {
                 s.bytes().len() <= max_name_size
             }),
             collection::vec(num::u8::ANY, 0..max_file_size),
@@ -158,14 +157,17 @@ mod tests {
     }
 
     fn files_should_round_trip(
-        files: Vec<(String, TempPath)>,
+        mut files: Vec<(String, TempPath)>,
     ) -> Result<(), proptest::test_runner::TestCaseError> {
+        // avoid name conflicts
+        files.dedup_by_key(|(name, _path)| name.to_owned());
+
         let mut data = Vec::<u8>::new();
 
         {
             let mut ar = pack::Archive::new();
             for (name, path) in files.iter() {
-                ar.add_file(name, path);
+                prop_assert_eq!(ar.add_file(name, path), Ok(()));
             }
 
             let mut writer = io::BufWriter::new(&mut data);
