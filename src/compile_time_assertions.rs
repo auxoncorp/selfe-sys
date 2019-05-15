@@ -43,12 +43,10 @@ const SEL4_SEND: unsafe extern "C" fn(seL4_CPtr, seL4_MessageInfo) = seL4_Send;
 const SEL4_NBSEND: unsafe extern "C" fn(seL4_CPtr, seL4_MessageInfo) = seL4_NBSend;
 const SEL4_REPLY: unsafe extern "C" fn(seL4_MessageInfo) = seL4_Reply;
 const SEL4_SIGNAL: unsafe extern "C" fn(seL4_CPtr) = seL4_Signal;
-const SEL4_RECV: unsafe extern "C" fn(seL4_CPtr, *mut seL4_Word) -> seL4_MessageInfo =
-    seL4_Recv;
+const SEL4_RECV: unsafe extern "C" fn(seL4_CPtr, *mut seL4_Word) -> seL4_MessageInfo = seL4_Recv;
 const SEL4_NBRECV: unsafe extern "C" fn(seL4_CPtr, *mut seL4_Word) -> seL4_MessageInfo =
     seL4_NBRecv;
-const SEL4_CALL: unsafe extern "C" fn(seL4_CPtr, seL4_MessageInfo) -> seL4_MessageInfo =
-    seL4_Call;
+const SEL4_CALL: unsafe extern "C" fn(seL4_CPtr, seL4_MessageInfo) -> seL4_MessageInfo = seL4_Call;
 const SEL4_REPLYRECV: unsafe extern "C" fn(
     seL4_CPtr,
     seL4_MessageInfo,
@@ -56,8 +54,7 @@ const SEL4_REPLYRECV: unsafe extern "C" fn(
 ) -> seL4_MessageInfo = seL4_ReplyRecv;
 const SEL4_YIELD: unsafe extern "C" fn() = seL4_Yield;
 const SEL4_WAIT: unsafe extern "C" fn(seL4_CPtr, *mut seL4_Word) = seL4_Wait;
-const SEL4_POLL: unsafe extern "C" fn(seL4_CPtr, *mut seL4_Word) -> seL4_MessageInfo =
-    seL4_Poll;
+const SEL4_POLL: unsafe extern "C" fn(seL4_CPtr, *mut seL4_Word) -> seL4_MessageInfo = seL4_Poll;
 
 // Target-independent API functions
 const UNTYPED_RETYPE: unsafe extern "C" fn(
@@ -197,15 +194,11 @@ const IRQCONTROL_GET: unsafe extern "C" fn(
     seL4_Uint8,
 ) -> seL4_Error = seL4_IRQControl_Get;
 const IRQHANDLER_ACK: unsafe extern "C" fn(seL4_IRQHandler) -> seL4_Error = seL4_IRQHandler_Ack;
-const IRQHANDLER_SETNOTIFICATION: unsafe extern "C" fn(
-    seL4_IRQHandler,
-    seL4_CPtr,
-) -> seL4_Error = seL4_IRQHandler_SetNotification;
-const IRQHANDLER_CLEAR: unsafe extern "C" fn(seL4_IRQHandler) -> seL4_Error =
-    seL4_IRQHandler_Clear;
+const IRQHANDLER_SETNOTIFICATION: unsafe extern "C" fn(seL4_IRQHandler, seL4_CPtr) -> seL4_Error =
+    seL4_IRQHandler_SetNotification;
+const IRQHANDLER_CLEAR: unsafe extern "C" fn(seL4_IRQHandler) -> seL4_Error = seL4_IRQHandler_Clear;
 const DOMAINSET_SET: unsafe extern "C" fn(seL4_DomainSet, seL4_Uint8, seL4_TCB) -> seL4_Error =
     seL4_DomainSet_Set;
-
 
 #[cfg(KernelPrinting)]
 mod kernel_printing_compile_time_assertions {
