@@ -11,6 +11,11 @@ RUSTFLAGS="-C link-args=-no-pie" cargo test
 )
 
 (
+    cd selfe-arc
+    ./test.sh
+)
+
+(
     cd example_application
     SEL4_PLATFORM=sabre cargo xbuild --target armv7-unknown-linux-gnueabihf
     SEL4_PLATFORM=pc99 cargo xbuild --target=x86_64-unknown-linux-gnu
