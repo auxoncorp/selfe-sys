@@ -1,0 +1,21 @@
+[package]
+name = "selfe-arc"
+version = "0.1.0"
+authors = ["Russell Mull <russell@auxon.io>"]
+edition = "2018"
+
+[dependencies]
+byteorder = "1"
+
+[dependencies.nom]
+version = "4"
+default-features = false
+
+[dev-dependencies]
+proptest = "0.9.3"
+proptest-derive = "0.1.0"
+tempfile = "3"
+
+[features]
+default = ["std"]
+std = []
