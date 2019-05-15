@@ -1,6 +1,6 @@
 set -e
 
-cargo test
+RUSTFLAGS="-C link-args=-no-pie" cargo test
 
 (
     cd selfe-config
