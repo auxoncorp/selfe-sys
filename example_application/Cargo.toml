@@ -16,4 +16,4 @@ panic = "abort"
 panic = "abort"
 
 [build-dependencies]
-cargo-5730 = { path = "../../cargo-5730" }
+cargo-5730 = { git = "ssh://github.com/auxoncorp/cargo-5730", branch = "master" }
