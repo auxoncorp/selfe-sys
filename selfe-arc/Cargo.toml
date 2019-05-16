@@ -5,11 +5,7 @@ authors = ["Russell Mull <russell@auxon.io>"]
 edition = "2018"
 
 [dependencies]
-byteorder = "1"
-
-[dependencies.nom]
-version = "4"
-default-features = false
+byteorder = { version = "1", default-features = false }
 
 [dev-dependencies]
 proptest = "0.9.3"
@@ -18,4 +14,4 @@ tempfile = "3"
 
 [features]
 default = ["std"]
-std = []
+std = ["byteorder/std"]
