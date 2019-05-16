@@ -44,4 +44,3 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 #[cfg(test)]
 include!(concat!(env!("OUT_DIR"), "/generated_tests.rs"));
-

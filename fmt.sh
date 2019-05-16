@@ -1,16 +1,27 @@
-cargo fmt 
-
-cd selfe-config
-cargo fmt
-cd ..
-
-cd example_application
 cargo fmt
 
-cd sel4_start
-cargo fmt
-cd ..
+(
+    cd selfe-config
+    cargo fmt
+)
 
-cd ..
+(
+    cd example_application
+    cargo fmt
+)
 
+(
+    cd example_application/sel4-start
+    cargo fmt
+)
+
+(
+    cd selfe-arc
+    cargo fmt
+)
+
+(
+    cd selfe-config
+    cargo fmt
+)
 

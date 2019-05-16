@@ -1,6 +1,6 @@
 set -e
 
-cargo test
+RUSTFLAGS="-C link-args=-no-pie" cargo test
 
 (
     cd selfe-config
@@ -8,6 +8,11 @@ cargo test
 
     cargo build --bin selfe --features bin
     cargo test --features bin
+)
+
+(
+    cd selfe-arc
+    ./test.sh
 )
 
 (

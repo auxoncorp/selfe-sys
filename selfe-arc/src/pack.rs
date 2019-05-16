@@ -45,7 +45,9 @@ impl Archive {
         Archive { files: vec![] }
     }
 
-    pub fn add_file(&mut self, name: &str, path: &Path) -> Result<(), AddFileError> {
+    pub fn add_file<P: AsRef<Path>>(&mut self, name: &str, path: P) -> Result<(), AddFileError> {
+        let path = path.as_ref();
+
         if name.is_empty() {
             return Err(AddFileError::EmptyNameNotAllowed);
         }
