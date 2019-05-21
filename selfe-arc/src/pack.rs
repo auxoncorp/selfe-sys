@@ -2,6 +2,7 @@ use std::convert::TryFrom;
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 
 use crate::layout;
 
@@ -26,6 +27,8 @@ pub enum ArchiveWriteError {
     DataSegmentTooLarge,
     FileNameTooLong(String),
     IO(io::Error),
+    UnsupportedTargetArch,
+    LinkError,
 }
 
 impl std::convert::From<io::Error> for ArchiveWriteError {
@@ -39,6 +42,16 @@ pub enum AddFileError {
     EmptyNameNotAllowed,
     NameConflict,
 }
+
+const LINKER_SCRIPT: &str = r#"SECTIONS
+{
+  .rodata : ALIGN(4)
+  {
+    _selfe_arc_data_start = . ;
+    *(.*) ;
+    _selfe_arc_data_end = . ;
+  }
+}"#;
 
 impl Archive {
     pub fn new() -> Archive {
@@ -165,6 +178,63 @@ impl Archive {
 
         Ok(())
     }
+
+    pub fn write_object_file<P: AsRef<Path>, P2: AsRef<Path>>(
+        &self,
+        output: P,
+        ld: P2,
+        target_arch: &str,
+    ) -> Result<(), ArchiveWriteError> {
+        let output = output.as_ref();
+        let ld = ld.as_ref();
+
+        let archive_path = output.with_extension("selfearc");
+
+        {
+            let mut archive_file = fs::File::create(&archive_path)?;
+            self.write(&mut archive_file)?;
+        }
+
+        let linker_script_path = output.with_extension("ld");
+
+        {
+            let mut linker_script_file = fs::File::create(&*linker_script_path)?;
+            write!(&mut linker_script_file, "{}", LINKER_SCRIPT)?;
+        }
+
+        let output_format = match target_arch {
+            "aarch64" => "elf64-littleaarch64",
+            "arm" | "armv7" | "armebv7r" | "armv5te" | "armv7r" | "armv7s" => "elf32-littlearm",
+            "i386" | "i586" | "i686" => "elf32-i386",
+            "riscv32imac" | "riscv32imc" | "riscv64gc" | "riscv64imac" => "elf32-littleriscv",
+            "thumbv7em" | "thumbv7m" | "thumbv7neon" => "elf32-littlearm",
+            "thumbv8m.main" => "elf64-littleaarch64",
+            "x86_64" => "elf64-x86-64",
+            _ => return Err(ArchiveWriteError::UnsupportedTargetArch),
+        };
+
+        let mut ld = Command::new(ld);
+        ld.arg("-T")
+            .arg(linker_script_path)
+            .arg("--oformat")
+            .arg(output_format)
+            .arg("-r")
+            .arg("-b")
+            .arg("binary")
+            .arg(archive_path)
+            .arg("-o")
+            .arg(output)
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
+        println!("running ld command: {:?}", ld);
+
+        let output = ld.output()?;
+        if !output.status.success() {
+            return Err(ArchiveWriteError::LinkError);
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -284,5 +354,28 @@ mod tests {
                 i, e, a
             );
         }
+    }
+
+    #[test]
+    fn object_file() {
+        use std::str;
+
+        {
+            let mut test_file = fs::File::create("/tmp/pack_test.txt").unwrap();
+            test_file.write_all(b"test").unwrap();
+        }
+
+        let mut ar = Archive::new();
+        ar.add_file("test", Path::new("/tmp/pack_test.txt"))
+            .unwrap();
+
+        ar.write_object_file("/tmp/pack_test.elf", "ld", "x86_64")
+            .unwrap();
+
+        let mut ld = Command::new("objdump");
+        let out = ld.arg("-t").arg("/tmp/pack_test.elf").output().unwrap();
+        let stdout = str::from_utf8(&out.stdout).unwrap();
+        assert!(stdout.contains("_selfe_arc_data_start"));
+        assert!(stdout.contains("_selfe_arc_data_end"));
     }
 }

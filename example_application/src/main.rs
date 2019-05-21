@@ -1,5 +1,5 @@
 #![no_std]
-#![feature(lang_items, core_intrinsics, asm, global_asm)]
+#![feature(lang_items, core_intrinsics)]
 
 use core::panic::PanicInfo;
 
@@ -58,20 +58,3 @@ fn main() {
 fn panic(info: &PanicInfo) -> ! {
     sel4_start::debug_panic_handler(&info)
 }
-
-global_asm!(
-    r#"
-.section ".rodata"
-.balign 4096
-
-.global _selfe_arc_data_start
-.type _selfe_arc_data_start, object
-_selfe_arc_data_start:
-  .incbin "target/selfe_arc_data"
-
-.balign 4096
-
-.global _selfe_arc_data_end
-_selfe_arc_data_end:
-"#
-);
