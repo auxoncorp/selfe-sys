@@ -5,3 +5,6 @@ pub mod read;
 
 #[cfg(feature = "std")]
 pub mod pack;
+
+#[cfg(feature = "std")]
+pub mod build;
