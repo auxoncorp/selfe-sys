@@ -41,6 +41,7 @@ impl std::convert::From<io::Error> for ArchiveWriteError {
 pub enum AddFileError {
     EmptyNameNotAllowed,
     NameConflict,
+    FileNameTooLong(String),
 }
 
 const LINKER_SCRIPT: &str = r#"SECTIONS
@@ -67,6 +68,10 @@ impl Archive {
 
         if self.files.iter().find(|f| f.name == name).is_some() {
             return Err(AddFileError::NameConflict);
+        }
+
+        if name.as_bytes().len() > layout::FILE_NAME_BYTES {
+            return Err(AddFileError::FileNameTooLong(name.to_owned()));
         }
 
         self.files.push(File {
@@ -261,6 +266,14 @@ mod tests {
 
         let res = ar.add_file("test", Path::new("doesn't_matter"));
         assert_eq!(res, Err(AddFileError::NameConflict));
+    }
+
+    #[test]
+    fn no_overlong_name() {
+        let mut ar = Archive::new();
+        let name = "dajlsdkfj alskdjflkasdjfkljasdkl fjalfj eliwjf lasdijflaksdjflkasjdlkfaj sdlfkjasldkf jalsdkjf laskjdf laskdjf lakwjflawjelf ijasdlkfjaslfiawejlfajsdkflasdkjflaskdjflaskdjflaskdjflaksjdflkasjdflaksdjflaskdjflaksdjflkasjdflkajsdflkajsdlkfjasldkfjlaksjdflkasjdflkajsdlkfjasldkjfaklsdjf";
+        let res = ar.add_file(name, Path::new("foo"));
+        assert_eq!(res, Err(AddFileError::FileNameTooLong(name.to_owned())));
     }
 
     #[test]
