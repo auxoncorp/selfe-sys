@@ -1,12 +1,14 @@
 //! helper fns for build script integration
 
 use crate::pack;
-use std::collections::HashMap;
 use std::{env, path};
 
 /// Add the given files to a selfe archive, turn it into a binary, and instruct
 /// cargo to include it when linking.
-pub fn link_with_archive(named_files: &[(&str, &path::Path)]) {
+pub fn link_with_archive<'a, 'b, I>(named_files: I)
+where
+    I: IntoIterator<Item = (&'a str, &'b path::Path)>,
+{
     let mut archive = pack::Archive::new();
     for (name, path) in named_files {
         archive.add_file(name, &path).expect(&format!(
