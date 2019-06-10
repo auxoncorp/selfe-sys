@@ -186,9 +186,18 @@ const CNODE_ROTATE: unsafe extern "C" fn(
 ) -> seL4_Error = seL4_CNode_Rotate;
 const CNODE_SAVECALLER: unsafe extern "C" fn(seL4_CNode, seL4_Word, seL4_Uint8) -> seL4_Error =
     seL4_CNode_SaveCaller;
+#[cfg(all(target_arch = "arm", target_pointer_width = "32"))]
 const IRQCONTROL_GET: unsafe extern "C" fn(
     seL4_IRQControl,
     ctypes::c_int,
+    seL4_CNode,
+    seL4_Word,
+    seL4_Uint8,
+) -> seL4_Error = seL4_IRQControl_Get;
+#[cfg(target_arch = "aarch64")]
+const IRQCONTROL_GET: unsafe extern "C" fn(
+    seL4_IRQControl,
+    seL4_Word,
     seL4_CNode,
     seL4_Word,
     seL4_Uint8,
