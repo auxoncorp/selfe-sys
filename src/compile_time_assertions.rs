@@ -9,7 +9,7 @@ fn existence_and_size_checks() {
     // Use transmute to tell the compiler to confirm type size equality at compile time
     // Note that we could be using the `static_assertions` lib instead, but are choosing
     // to trim dependencies aggressively for now.
-    use ::core::mem::transmute as assert_eq_size;
+    use core::mem::transmute as assert_eq_size;
     let _ = assert_eq_size::<seL4_Word, seL4_CNode_CapData>;
     let _ = assert_eq_size::<seL4_Word, seL4_CapRights>;
     let _ = assert_eq_size::<seL4_Word, seL4_MessageInfo>;
@@ -186,15 +186,6 @@ const CNODE_ROTATE: unsafe extern "C" fn(
 ) -> seL4_Error = seL4_CNode_Rotate;
 const CNODE_SAVECALLER: unsafe extern "C" fn(seL4_CNode, seL4_Word, seL4_Uint8) -> seL4_Error =
     seL4_CNode_SaveCaller;
-#[cfg(all(target_arch = "arm", target_pointer_width = "32"))]
-const IRQCONTROL_GET: unsafe extern "C" fn(
-    seL4_IRQControl,
-    ctypes::c_int,
-    seL4_CNode,
-    seL4_Word,
-    seL4_Uint8,
-) -> seL4_Error = seL4_IRQControl_Get;
-#[cfg(target_arch = "aarch64")]
 const IRQCONTROL_GET: unsafe extern "C" fn(
     seL4_IRQControl,
     seL4_Word,
