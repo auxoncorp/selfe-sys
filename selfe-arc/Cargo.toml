@@ -5,7 +5,14 @@ authors = ["Russell Mull <russell@auxon.io>"]
 edition = "2018"
 
 [dependencies]
-byteorder = { version = "1", default-features = false }
+#byteorder = { version = "1", default-features = false }
+
+# Thanks to rust-lang/cargo#5730
+# we specify this as an independent vendored crate
+[dependencies.byteorder]
+git = "ssh://git@github.com/auxoncorp/byteorder.git"
+branch = "no-std"
+default-features = false
 
 [dev-dependencies]
 proptest = "0.9.3"

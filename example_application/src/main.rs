@@ -14,6 +14,8 @@ extern "C" {
 }
 
 fn main() {
+    #[cfg(target_arch = "aarch64")]
+    let arch = "aarch64";
     #[cfg(target_arch = "arm")]
     let arch = "arm";
     #[cfg(target_arch = "x86_64")]

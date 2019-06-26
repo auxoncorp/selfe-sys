@@ -324,7 +324,7 @@ fn print_kernel_paths(outcome: &SeL4BuildOutcome) {
 mod simulate {
     use crate::SimulateParams;
     use selfe_config::model::contextualized::Contextualized;
-    use selfe_config::model::SingleValue;
+    use selfe_config::model::{SeL4Arch, SingleValue};
     use std::path::{Path, PathBuf};
     use std::process::{Command, Stdio};
 
@@ -363,12 +363,21 @@ mod simulate {
         }
 
         let machine = determine_machine(config)?;
-        if let Some(machine) = &machine {
-            command.arg("-machine").arg(machine);
+        if let Some(machine_entries) = &machine {
+            for entry in machine_entries {
+                command.arg("-machine").arg(entry);
+            }
         }
 
         if let Some(cpu) = determine_cpu_with_properties(config) {
             command.arg("-cpu").arg(cpu);
+        }
+
+        match config.context.sel4_arch {
+            SeL4Arch::Aarch64 => {
+                command.arg("-smp").arg("1");
+            }
+            _ => (),
         }
 
         command.arg("-nographic").arg("-s");
@@ -376,12 +385,12 @@ mod simulate {
         if let Some(serial_override) = &simulate_params.serial_override {
             command.args(serial_override.split_whitespace());
         } else {
-            if let Some("sabrelite") = machine {
+            if config.context.platform.0 == "sabre" {
                 command.arg("-serial").arg("null");
             }
             command.arg("-serial").arg("mon:stdio");
         }
-        command.arg("-m").arg("size=1024M");
+        command.arg("-m").arg("size=2048M");
 
         if let Some(extra_qemu_args) = &simulate_params.extra_qemu_args {
             command.args(extra_qemu_args.iter());
@@ -402,35 +411,20 @@ mod simulate {
         }
     }
 
-    fn determine_machine(config: &Contextualized) -> Result<Option<&'static str>, String> {
-        let kernel_platform = config
-            .sel4_config
-            .get("KernelX86Platform")
-            .or_else(|| config.sel4_config.get("KernelARMPlatform"))
-            .ok_or_else(|| {
-                "KernelARMPlatform or KernelX86Platform missing but required as a sel4 config option"
-            })?;
-        if let SingleValue::String(kp) = kernel_platform {
-            match kp.as_ref() {
-                "imx6" | "sabre" | "sabrelite" => Ok(Some("sabrelite")),
-                _ => Ok(None),
-            }
-        } else {
-            Ok(None)
+    fn determine_machine(config: &Contextualized) -> Result<Option<Vec<&'static str>>, String> {
+        match config.context.platform.0.as_ref() {
+            "imx6" | "sabre" | "sabrelite" => Ok(Some(vec!["sabrelite"])),
+            "virt" | "tx1" => Ok(Some(vec!["virt,gic_version=2", "virtualization=true"])),
+            _ => Ok(None),
         }
     }
 
     fn determine_binary(config: &Contextualized) -> Result<Option<&'static str>, String> {
-        let kernel_arch = config.sel4_config.get("KernelArch").ok_or_else(|| {
-            "KernelArch is a required config property for simulation to work".to_string()
-        })?;
-        match kernel_arch {
-            SingleValue::String(arch) => match arch.as_ref() {
-                "x86" | "x86_64" => Ok(Some("qemu-system-x86_64")),
-                "arm" | "aarch32" => Ok(Some("qemu-system-arm")),
-                _ => Ok(None),
-            },
-            _ => Err("Unexpected non-string property value type for KernelArch".to_string()),
+        match config.context.sel4_arch {
+            SeL4Arch::X86_64 => Ok(Some("qemu-system-x86_64")),
+            SeL4Arch::Aarch32 | SeL4Arch::ArmHyp => Ok(Some("qemu-system-arm")),
+            SeL4Arch::Aarch64 => Ok(Some("qemu-system-aarch64")),
+            _ => Ok(None),
         }
     }
 
@@ -438,50 +432,56 @@ mod simulate {
         fn determine_cpu(config: &Contextualized) -> Option<&'static str> {
             if let Some(SingleValue::String(micro)) = config.sel4_config.get("KernelX86MicroArch") {
                 match micro.as_ref() {
-                    "nehalem" | "Nehalem" => Some("Nehalem"),
-                    _ => None,
+                    "nehalem" | "Nehalem" => return Some("Nehalem"),
+                    _ => (),
                 }
-            } else {
-                None
             }
+            match config.context.platform.0.as_ref() {
+                "tx1" | "virt" => return Some("cortex-a57"),
+                _ => (),
+            }
+            None
         }
 
-        if let Some(cpu) = determine_cpu(config) {
-            let mut v = vec![cpu.to_string()];
-            v.push(toggle_flag_by_property_presence(config, "KernelVTX", "vme"));
-            v.push(toggle_flag_by_property_presence(
-                config,
-                "KernelHugePage",
-                "pdpe1gb",
-            ));
-            v.push(toggle_flag_by_property_presence(
-                config,
-                "KernelFPUXSave",
-                "xsave",
-            ));
-            v.push(toggle_flag_by_property_presence(
-                config,
-                "KernelXSaveXSaveOpt",
-                "xsaveopt",
-            ));
-            v.push(toggle_flag_by_property_presence(
-                config,
-                "KernelXSaveXSaveC",
-                "xsavec",
-            ));
-            v.push(toggle_flag_by_property_presence(
-                config,
-                "KernelFSGSBaseInst",
-                "fsgsbase",
-            ));
-            v.push(toggle_flag_by_property_presence(
-                config,
-                "KernelSupportPCID",
-                "invpcid",
-            ));
-            Some(v.join(","))
-        } else {
-            None
+        match determine_cpu(config) {
+            // If necessary, could expand this cpu flag toggling to other micro-architectures?
+            Some("Nehalem") => {
+                let mut v = vec!["Nehalem".to_string()];
+                v.push(toggle_flag_by_property_presence(config, "KernelVTX", "vme"));
+                v.push(toggle_flag_by_property_presence(
+                    config,
+                    "KernelHugePage",
+                    "pdpe1gb",
+                ));
+                v.push(toggle_flag_by_property_presence(
+                    config,
+                    "KernelFPUXSave",
+                    "xsave",
+                ));
+                v.push(toggle_flag_by_property_presence(
+                    config,
+                    "KernelXSaveXSaveOpt",
+                    "xsaveopt",
+                ));
+                v.push(toggle_flag_by_property_presence(
+                    config,
+                    "KernelXSaveXSaveC",
+                    "xsavec",
+                ));
+                v.push(toggle_flag_by_property_presence(
+                    config,
+                    "KernelFSGSBaseInst",
+                    "fsgsbase",
+                ));
+                v.push(toggle_flag_by_property_presence(
+                    config,
+                    "KernelSupportPCID",
+                    "invpcid",
+                ));
+                Some(v.join(","))
+            }
+            Some(cpu) => Some(cpu.into()),
+            None => None,
         }
     }
 

@@ -6,18 +6,27 @@ util_libs  = { git = "https://github.com/seL4/util_libs" , rev = "98aaebe56c66d4
 [sel4.config]
 KernelRetypeFanOutLimit = 16384
 
+# sel4_arch configuration sets
+
 [sel4.config.x86_64]
 KernelArch = 'x86'
 KernelX86Sel4Arch = 'x86_64'
 KernelSel4Arch = 'x86_64'
 # KernelIOMMU = true
 
-[sel4.config.arm]
+[sel4.config.aarch32]
 KernelArch = 'arm'
 KernelArmSel4Arch = 'aarch32'
 KernelSel4Arch = 'aarch32'
 # KernelArmSMMU = true
 # KernelArmHypervisorSupport = true
+
+[sel4.config.aarch64]
+KernelArch = 'arm'
+KernelArmSel4Arch = 'aarch64'
+KernelSel4Arch = 'aarch64'
+
+# platform configuration sets
 
 [sel4.config.pc99]
 KernelX86Platform = 'pc99'
@@ -25,6 +34,14 @@ KernelX86Platform = 'pc99'
 [sel4.config.sabre]
 KernelARMPlatform = 'imx6'
 KernelHaveFPU = true
+
+[sel4.config.tx1]
+KernelARMPlatform = 'tx1'
+KernelHaveFPU = true
+ElfloaderImage = 'binary'
+KernelArmHypervisorSupport = true
+
+# compilation-profile configuration sets
 
 [sel4.config.debug]
 KernelPrinting = true
@@ -34,7 +51,12 @@ KernelDebugBuild = true
 KernelPrinting = false
 KernelDebugBuild = false
 
+# build per platform details
+
 [build.pc99]
 
 [build.sabre]
 cross_compiler_prefix = "arm-linux-gnueabihf-"
+
+[build.tx1]
+cross_compiler_prefix = "aarch64-linux-gnu-"

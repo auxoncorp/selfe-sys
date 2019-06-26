@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -e
 
 RUSTFLAGS="-C link-args=-no-pie" cargo test
@@ -19,6 +20,7 @@ RUSTFLAGS="-C link-args=-no-pie" cargo test
     cd example_application
     SEL4_PLATFORM=sabre cargo xbuild --target armv7-unknown-linux-gnueabihf
     SEL4_PLATFORM=pc99 cargo xbuild --target=x86_64-unknown-linux-gnu
+    SEL4_PLATFORM=tx1 cargo xbuild --target aarch64-unknown-linux-gnu
 
     ../selfe-config/target/debug/selfe build --sel4_arch x86_64 --platform pc99 --debug
     ../selfe-config/target/debug/selfe build --sel4_arch x86_64 --platform pc99 --release
