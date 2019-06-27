@@ -41,6 +41,12 @@ KernelHaveFPU = true
 ElfloaderImage = 'binary'
 KernelArmHypervisorSupport = true
 
+[sel4.config.virt]
+KernelARMPlatform = 'tx1'
+KernelHaveFPU = true
+ElfloaderImage = 'elf'
+KernelArmHypervisorSupport = true
+
 # compilation-profile configuration sets
 
 [sel4.config.debug]
@@ -59,4 +65,7 @@ KernelDebugBuild = false
 cross_compiler_prefix = "arm-linux-gnueabihf-"
 
 [build.tx1]
+cross_compiler_prefix = "aarch64-linux-gnu-"
+
+[build.virt]
 cross_compiler_prefix = "aarch64-linux-gnu-"
