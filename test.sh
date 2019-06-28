@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 set -e
 
-RUSTFLAGS="-C link-args=-no-pie" cargo test
+RUSTFLAGS="-C link-args=-no-pie" cargo +stable build
+RUSTFLAGS="-C link-args=-no-pie" cargo +stable test
+RUSTFLAGS="-C link-args=-no-pie" cargo +nightly test
 
 (
     cd selfe-config
-    cargo test
+    cargo +stable test
+    cargo +nightly test
 
     cargo build --bin selfe --features bin
     cargo test --features bin
