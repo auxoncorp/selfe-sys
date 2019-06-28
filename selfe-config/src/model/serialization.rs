@@ -45,11 +45,11 @@ fn serialize_repo_source(source: &RepoSource) -> TomlTable {
             table.insert_str("path", format!("{}", p.display()));
         }
         RepoSource::RemoteGit { url, target } => {
-            table.insert_str("git", url.as_ref());
+            table.insert_str("git", url.as_str());
             match target {
-                GitTarget::Branch(v) => table.insert_str("branch", v.as_ref()),
-                GitTarget::Tag(v) => table.insert_str("tag", v.as_ref()),
-                GitTarget::Rev(v) => table.insert_str("rev", v.as_ref()),
+                GitTarget::Branch(v) => table.insert_str("branch", v.as_str()),
+                GitTarget::Tag(v) => table.insert_str("tag", v.as_str()),
+                GitTarget::Rev(v) => table.insert_str("rev", v.as_str()),
             };
         }
     }
@@ -73,7 +73,7 @@ fn serialize_properties_tree(source: &full::PropertiesTree) -> TomlTable {
         );
     }
     for (k, t) in source.contextual.iter() {
-        properties.insert_table(k.as_ref(), t.iter().map(SingleValue::toml_pair).collect());
+        properties.insert_table(k.as_str(), t.iter().map(SingleValue::toml_pair).collect());
     }
     properties
 }
@@ -86,7 +86,7 @@ fn serialize_build(source: &BTreeMap<String, full::PlatformBuild>) -> Option<Tom
     for (k, plat) in source.iter() {
         let mut plat_table = TomlTable::new();
         if let Some(ref v) = plat.cross_compiler_prefix {
-            plat_table.insert_str("cross_compiler_prefix", v.as_ref());
+            plat_table.insert_str("cross_compiler_prefix", v.as_str());
         }
         if let Some(ref v) = plat.toolchain_dir {
             plat_table.insert_str("toolchain_dir", format!("{}", v.display()));
@@ -98,7 +98,7 @@ fn serialize_build(source: &BTreeMap<String, full::PlatformBuild>) -> Option<Tom
         if let Some(t) = serialize_profile_build(&plat.release_build_profile) {
             plat_table.insert_table("release", t);
         }
-        build.insert_table(k.as_ref(), plat_table);
+        build.insert_table(k.as_str(), plat_table);
     }
     Some(build)
 }
@@ -107,7 +107,7 @@ fn serialize_profile_build(source: &Option<full::PlatformBuildProfile>) -> Optio
     source.as_ref().map(|v| {
         let mut prof_table = TomlTable::new();
         if let Some(mrt) = v.make_root_task.as_ref() {
-            prof_table.insert_str("make_root_task", mrt.as_ref());
+            prof_table.insert_str("make_root_task", mrt.as_str());
         }
         prof_table.insert_str(
             "root_task_image",
