@@ -73,7 +73,11 @@ fn is_dir_absent_or_empty(dir_path: &Path) -> bool {
                 dir_path.display()
             );
         }
-        std::fs::read_dir(dir_path).iter().len() == 0
+        std::fs::read_dir(dir_path)
+            .map_err(|e| format!("Could not read directory {} : {:?}", dir_path.display(), e))
+            .unwrap()
+            .count()
+            == 0
     } else {
         true
     }
@@ -89,11 +93,13 @@ pub struct ResolvedSeL4Source {
 pub fn resolve_sel4_sources(
     source: &model::SeL4Sources,
     dest_dir: &Path,
+    is_verbose: bool,
 ) -> Result<ResolvedSeL4Source, String> {
     fn resolve_repo_source(
         source: &model::RepoSource,
         name_hint: &str,
         dest_dir: &Path,
+        is_verbose: bool,
     ) -> Result<PathBuf, String> {
         use model::{GitTarget, RepoSource};
         match source {
@@ -103,6 +109,13 @@ pub fn resolve_sel4_sources(
                 let name_suffix = format!("{}-{}-{}", name_hint, target_kind, target.value());
                 let dir = dest_dir.join(name_suffix);
                 let dir_needs_content = is_dir_absent_or_empty(&dir);
+                if is_verbose {
+                    println!(
+                        "Git based source directory {:?} {} need fresh content",
+                        dir,
+                        if dir_needs_content { "DID" } else { " did not" }
+                    );
+                }
                 fs::create_dir_all(&dir).expect("Failed to create dir");
                 let dir = fs::canonicalize(&dir).unwrap_or_else(|_| {
                     panic!(
@@ -128,9 +141,9 @@ pub fn resolve_sel4_sources(
         }
     }
     Ok(ResolvedSeL4Source {
-        kernel_dir: resolve_repo_source(&source.kernel, "kernel", dest_dir)?,
-        tools_dir: resolve_repo_source(&source.tools, "seL4_tools", dest_dir)?,
-        util_libs_dir: resolve_repo_source(&source.util_libs, "util_libs", dest_dir)?,
+        kernel_dir: resolve_repo_source(&source.kernel, "kernel", dest_dir, is_verbose)?,
+        tools_dir: resolve_repo_source(&source.tools, "seL4_tools", dest_dir, is_verbose)?,
+        util_libs_dir: resolve_repo_source(&source.util_libs, "util_libs", dest_dir, is_verbose)?,
     })
 }
 
@@ -301,5 +314,33 @@ pub fn build_sel4(
             _ => panic!("Unsupported target"),
         },
         SeL4BuildMode::Lib => SeL4BuildOutcome::StaticLib { build_dir },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::File;
+    use std::io::Write;
+    use tempfile::tempdir;
+    #[test]
+    fn is_dir_absent_or_empty_when_absent() {
+        assert!(is_dir_absent_or_empty(Path::new(
+            "/314159/2653789/totally_not_a_real_path"
+        )));
+    }
+    #[test]
+    fn is_dir_empty_negative_when_empty() {
+        let t = tempdir().expect("Could not make a temp dir");
+        assert!(is_dir_absent_or_empty(t.path()));
+    }
+    #[test]
+    fn is_dir_empty_negative_when_full() {
+        let t = tempdir().expect("Could not make a temp dir");
+        let file_path = t.path().join("my-temporary-note.txt");
+        let mut file = File::create(file_path).expect("Could not create file in temp dir");
+        writeln!(file, "A tiny bit of content").expect("Could not write content to dummy file");
+        file.flush().expect("Could not flush to file");
+        assert!(!is_dir_absent_or_empty(t.path()));
     }
 }
