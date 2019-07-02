@@ -250,8 +250,12 @@ fn build_kernel(
         kernel_dir,
         tools_dir,
         util_libs_dir,
-    } = resolve_sel4_sources(&config.sel4_sources, &out_dir.join("source"))
-        .expect("resolve sel4 source");
+    } = resolve_sel4_sources(
+        &config.sel4_sources,
+        &out_dir.join("source"),
+        build_params.is_verbose,
+    )
+    .expect("resolve sel4 source");
 
     let root_task = config.build.root_task.as_ref()
         .unwrap_or_else(|| panic!("root task information, particularly a root_task_image path must be supplied in [build.platform.profile], here [build.{}.{}]",
