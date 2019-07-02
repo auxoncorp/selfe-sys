@@ -11,7 +11,10 @@
 #![no_std]
 #![feature(lang_items, core_intrinsics, asm, naked_functions)]
 #![cfg_attr(
-    any(all(target_arch = "arm", target_pointer_width = "32"), target_arch = "aarch64"),
+    any(
+        all(target_arch = "arm", target_pointer_width = "32"),
+        target_arch = "aarch64"
+    ),
     feature(global_asm)
 )]
 

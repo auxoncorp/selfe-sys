@@ -178,6 +178,10 @@ is_fault = false
 name = "CapRights"
 is_fault = false
   [[bitfield_types.fields]]
+  name = "capAllowGrantReply"
+  width = 1
+
+  [[bitfield_types.fields]]
   name = "capAllowGrant"
   width = 1
 

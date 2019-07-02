@@ -22,11 +22,23 @@ root_task_image = "target/armv7-unknown-linux-gnueabihf/debug/example"
 make_root_task = "cargo xbuild --target=armv7-unknown-linux-gnueabihf --release"
 root_task_image = "target/armv7-unknown-linux-gnueabihf/release/example"
 
+### TX1 Virt (aarch64)
+[build.virt]
+cross_compiler_prefix = "aarch64-linux-gnu-"
+
+[build.virt.debug]
+make_root_task = "cargo xbuild --target=aarch64-unknown-linux-gnu"
+root_task_image = "target/aarch64-unknown-linux-gnu/debug/example"
+
+[build.virt.release]
+make_root_task = "cargo xbuild --target=aarch64-unknown-linux-gnu --release"
+root_task_image = "target/aarch64-unknown-linux-gnu/release/example"
 
 [sel4]
-kernel = { git = "https://github.com/seL4/seL4" , tag = "10.1.1" }
-tools = { git = "https://github.com/seL4/seL4_tools" , branch = "10.1.x-compatible" }
-util_libs  = { git = "https://github.com/seL4/util_libs" , branch = "10.1.x-compatible" }
+# Specifically selected to support the virtualized aarch64 tx1-like platform, virt
+kernel = { git = "ssh://git@github.com/auxoncorp/seL4.git", branch = "add-virt-platform" }
+tools = { git = "ssh://git@github.com/auxoncorp/seL4_tools.git", branch = "add-virt-platform" }
+util_libs  = { git = "ssh://git@github.com/auxoncorp/util_libs.git", branch = "add-virt-platform" }
 
 ### arch
 
@@ -47,6 +59,10 @@ KernelX86Sel4Arch = 'x86_64'
 KernelSel4Arch = 'aarch32'
 KernelArmSel4Arch = 'aarch32'
 
+[sel4.config.aarch64]
+KernelSel4Arch = 'aarch64'
+KernelArmSel4Arch = 'aarch64'
+
 ### platform
 
 [sel4.config.pc99]
@@ -63,6 +79,12 @@ KernelX86RSBOnContextSwitch = false
 [sel4.config.sabre]
 KernelARMPlatform = 'imx6'
 KernelHaveFPU = true
+
+[sel4.config.virt]
+KernelARMPlatform = 'virt'
+KernelHaveFPU = true
+ElfloaderImage = 'elf'
+KernelArmHypervisorSupport = true
 
 ### Build mode
 

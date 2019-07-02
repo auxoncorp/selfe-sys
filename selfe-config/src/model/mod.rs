@@ -524,10 +524,11 @@ mod tests {
     #[test]
     fn default_content_is_valid() {
         let f: full::Full = get_default_config();
+        // Spot check a known piece of the default config content
         assert_eq!(
             RepoSource::RemoteGit {
                 url: "https://github.com/seL4/seL4".to_string(),
-                target: GitTarget::Tag("10.1.1".to_string())
+                target: GitTarget::Rev("4d0f02c029560cae0e8d93727eb17d58bcecc2ac".to_string())
             },
             f.sel4.sources.kernel
         )
