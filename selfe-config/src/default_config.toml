@@ -42,7 +42,7 @@ ElfloaderImage = 'binary'
 KernelArmHypervisorSupport = true
 
 [sel4.config.virt]
-KernelARMPlatform = 'tx1'
+KernelARMPlatform = 'virt'
 KernelHaveFPU = true
 ElfloaderImage = 'elf'
 KernelArmHypervisorSupport = true
