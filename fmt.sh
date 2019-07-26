@@ -26,3 +26,8 @@ cargo fmt
     cargo fmt
 )
 
+(
+    cd selfe-runtime
+    cargo fmt
+)
+

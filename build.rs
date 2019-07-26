@@ -450,8 +450,12 @@ fn main() {
         kernel_dir,
         tools_dir,
         util_libs_dir,
-    } = resolve_sel4_sources(&config.sel4_sources, &out_dir.join("sel4_source"), is_verbose)
-        .expect("resolve sel4 source");
+    } = resolve_sel4_sources(
+        &config.sel4_sources,
+        &out_dir.join("sel4_source"),
+        is_verbose,
+    )
+    .expect("resolve sel4 source");
 
     let build_dir = if let SeL4BuildOutcome::StaticLib { build_dir } = build_sel4(
         &out_dir,
