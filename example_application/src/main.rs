@@ -1,9 +1,8 @@
 #![no_std]
 
 use core::fmt::Write;
-use sel4_start;
+use sel4_start::{self, DebugOutHandle};
 use selfe_arc;
-use selfe_runtime::debug::DebugOutHandle;
 use selfe_sys::{seL4_BootInfo, seL4_CapInitThreadTCB, seL4_TCB_Suspend};
 
 extern "C" {

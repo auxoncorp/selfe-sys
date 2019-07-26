@@ -2,7 +2,7 @@
 #![feature(core_intrinsics)]
 
 pub mod debug;
-mod libc;
+pub mod libc;
 
 #[cfg(feature = "panic_handler")]
 mod panic;

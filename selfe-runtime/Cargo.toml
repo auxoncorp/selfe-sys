@@ -7,6 +7,9 @@ edition = "2018"
 [dependencies]
 selfe-sys = { path = ".." }
 
+[build-dependencies]
+selfe-config = { path = "../selfe-config" }
+
 [features]
 default = []
 panic_handler = []

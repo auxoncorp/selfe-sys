@@ -18,10 +18,16 @@
     feature(global_asm)
 )]
 
+extern crate selfe_runtime;
 extern crate selfe_sys;
+
+pub use selfe_runtime::debug::DebugOutHandle;
 
 #[cfg(not(test))]
 use core::alloc::Layout;
+use core::fmt::Write;
+
+use core::panic::PanicInfo;
 use selfe_sys::*;
 
 #[repr(align(4096))]
@@ -89,6 +95,15 @@ pub fn lang_start<T: Termination + 'static>(
     0
 }
 
+#[allow(unused)]
+pub fn debug_panic_handler(info: &PanicInfo) -> ! {
+    let _res = writeln!(DebugOutHandle, "*** Panic: {:#?}", info);
+
+    unsafe {
+        core::intrinsics::abort();
+    }
+}
+
 #[lang = "oom"]
 #[no_mangle]
 #[cfg(not(test))]
@@ -120,3 +135,17 @@ include!("arm.rs");
 
 #[cfg(target_arch = "aarch64")]
 include!("arm64.rs");
+
+///////////////////////////////////////////
+// re-export libc fns, for compatibility //
+///////////////////////////////////////////
+
+#[no_mangle]
+pub extern "C" fn __assert_fail(expr: *const u8, file: *const u8, line: i32, func: *const u8) -> ! {
+    selfe_runtime::libc::__assert_fail(expr, file, line, func)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn strcpy(dest: *mut u8, source: *const u8) -> *const u8 {
+    selfe_runtime::libc::strcpy(dest, source)
+}
