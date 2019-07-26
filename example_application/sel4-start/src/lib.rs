@@ -22,8 +22,6 @@ extern crate selfe_sys;
 
 #[cfg(not(test))]
 use core::alloc::Layout;
-use core::fmt::{self, Write};
-use core::panic::PanicInfo;
 use selfe_sys::*;
 
 #[repr(align(4096))]
