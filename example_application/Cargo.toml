@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 sel4-start = { path = "sel4-start" }
 selfe-sys = { path = ".." }
+selfe-runtime = { path = "../selfe-runtime", features = ["panic_handler"] }
 selfe-arc = { path = "../selfe-arc", default-features = false }
 
 [profile.dev]

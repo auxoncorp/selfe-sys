@@ -1,11 +1,9 @@
 #![no_std]
-#![feature(lang_items, core_intrinsics)]
-
-use core::panic::PanicInfo;
 
 use core::fmt::Write;
-use sel4_start::{self, DebugOutHandle};
+use sel4_start;
 use selfe_arc;
+use selfe_runtime::debug::DebugOutHandle;
 use selfe_sys::{seL4_BootInfo, seL4_CapInitThreadTCB, seL4_TCB_Suspend};
 
 extern "C" {
@@ -54,9 +52,4 @@ fn main() {
         )
         .unwrap();
     }
-}
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    sel4_start::debug_panic_handler(&info)
 }
