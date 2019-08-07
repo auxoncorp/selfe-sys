@@ -5,7 +5,7 @@ authors = ["Russell Mull <russell@auxon.io>", "Zachary Pierce <zack@auxon.io>"]
 edition = "2018"
 
 [dependencies]
-sel4-start = { path = "sel4-start" }
+sel4-start = { path = "sel4-start", features = ["panic_handler"] }
 selfe-sys = { path = ".." }
 selfe-arc = { path = "../selfe-arc", default-features = false }
 

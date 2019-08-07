@@ -46,7 +46,7 @@ pub enum AddFileError {
 
 const LINKER_SCRIPT: &str = r#"SECTIONS
 {
-  .rodata : ALIGN(8)
+  .rodata : ALIGN(4096)
   {
     _selfe_arc_data_start = . ;
     *(.*) ;

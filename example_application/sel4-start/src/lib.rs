@@ -18,11 +18,15 @@
     feature(global_asm)
 )]
 
+extern crate selfe_runtime;
 extern crate selfe_sys;
+
+pub use selfe_runtime::debug::DebugOutHandle;
 
 #[cfg(not(test))]
 use core::alloc::Layout;
-use core::fmt::{self, Write};
+use core::fmt::Write;
+
 use core::panic::PanicInfo;
 use selfe_sys::*;
 
@@ -91,23 +95,6 @@ pub fn lang_start<T: Termination + 'static>(
     0
 }
 
-pub struct DebugOutHandle;
-
-impl fmt::Write for DebugOutHandle {
-    #[cfg(KernelPrinting)]
-    fn write_str(&mut self, s: &str) -> ::core::fmt::Result {
-        for &b in s.as_bytes() {
-            unsafe { seL4_DebugPutChar(b as i8) };
-        }
-        Ok(())
-    }
-
-    #[cfg(not(KernelPrinting))]
-    fn write_str(&mut self, _s: &str) -> ::core::fmt::Result {
-        Ok(())
-    }
-}
-
 #[allow(unused)]
 pub fn debug_panic_handler(info: &PanicInfo) -> ! {
     let _res = writeln!(DebugOutHandle, "*** Panic: {:#?}", info);
@@ -149,54 +136,16 @@ include!("arm.rs");
 #[cfg(target_arch = "aarch64")]
 include!("arm64.rs");
 
-/////////////////////////////////////////////////////////////////////////////////////
-// libsel4.a contains code that depends on __assert fail and strcp. Since you      //
-// don't have a libc if you're using sel4-start, provide primitive implementations //
-// of them here.                                                                   //
-/////////////////////////////////////////////////////////////////////////////////////
-
-/// A tiny cstr wrapper to enable printing assertion failures
-struct CStr(*const u8);
-
-impl fmt::Display for CStr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        unsafe {
-            let mut p = self.0;
-            loop {
-                if *p == 0 {
-                    break;
-                }
-
-                write!(f, "{}", *p as char)?;
-                p = p.offset(1);
-            }
-        }
-
-        Ok(())
-    }
-}
+///////////////////////////////////////////
+// re-export libc fns, for compatibility //
+///////////////////////////////////////////
 
 #[no_mangle]
 pub extern "C" fn __assert_fail(expr: *const u8, file: *const u8, line: i32, func: *const u8) -> ! {
-    panic!(
-        "ASSERT {} in {} at {}:{}",
-        CStr(expr),
-        CStr(func),
-        CStr(file),
-        line
-    );
+    selfe_runtime::libc::__assert_fail(expr, file, line, func)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn strcpy(dest: *mut u8, mut source: *const u8) -> *const u8 {
-    let mut d = dest;
-    loop {
-        *d = *source;
-        if *d == 0 {
-            return dest;
-        } else {
-            source = source.offset(1);
-            d = d.offset(1);
-        }
-    }
+pub unsafe extern "C" fn strcpy(dest: *mut u8, source: *const u8) -> *const u8 {
+    selfe_runtime::libc::strcpy(dest, source)
 }

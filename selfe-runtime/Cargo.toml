@@ -1,0 +1,15 @@
+[package]
+name = "selfe-runtime"
+version = "0.1.0"
+authors = ["Russell Mull <russell@auxon.io>"]
+edition = "2018"
+
+[dependencies]
+selfe-sys = { path = ".." }
+
+[build-dependencies]
+selfe-config = { path = "../selfe-config" }
+
+[features]
+default = []
+panic_handler = []
