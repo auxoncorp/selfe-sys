@@ -484,4 +484,15 @@ fn main() {
         config.context.sel4_arch,
         cargo_cfg_target_pointer_width,
     );
+
+    // Build the libc stubs
+    let mut build = cc::Build::new();
+    build.file("src/nano_libc.c");
+    if config.sel4_config.get("KernelPrinting")
+        == Some(&selfe_config::model::SingleValue::Boolean(true))
+    {
+        build.define("KernelPrinting", None);
+    }
+
+    build.compile("nano_libc");
 }

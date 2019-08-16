@@ -135,17 +135,3 @@ include!("arm.rs");
 
 #[cfg(target_arch = "aarch64")]
 include!("arm64.rs");
-
-///////////////////////////////////////////
-// re-export libc fns, for compatibility //
-///////////////////////////////////////////
-
-#[no_mangle]
-pub extern "C" fn __assert_fail(expr: *const u8, file: *const u8, line: i32, func: *const u8) -> ! {
-    selfe_runtime::libc::__assert_fail(expr, file, line, func)
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn strcpy(dest: *mut u8, source: *const u8) -> *const u8 {
-    selfe_runtime::libc::strcpy(dest, source)
-}
