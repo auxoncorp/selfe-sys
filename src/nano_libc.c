@@ -19,6 +19,9 @@ void debug_puts(char* s) {
 }
 
 extern void __assert_fail(char *expr, char* file, int line, char* func) {
+  // Warning prevention
+  (void) line;
+
   debug_puts("ASSERT ");
   debug_puts(expr);
   debug_puts(" in ");
