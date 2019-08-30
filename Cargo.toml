@@ -10,6 +10,9 @@ name = "selfe_sys"
 [dependencies]
 
 [build-dependencies]
+cargo-5730 = "0.2"
+
+[workaround-build-dependencies]
 bindgen = { version = "0.49", default-features = false }
 selfe-config = { path = "./selfe-config" }
 quote = "0.6"

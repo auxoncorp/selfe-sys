@@ -540,6 +540,5 @@ mod arm_specific_compile_time_assertions {
     mod sixty_four_bit_specific {
         // TODO - 64 bit specific functions
     }
-
 }
 // TODO - add presence-checks for more constants of interest, e.g. the retype-ids for arch-agnostic kernel objects
