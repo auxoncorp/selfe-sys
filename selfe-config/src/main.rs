@@ -504,5 +504,4 @@ mod simulate {
             format!("-{}", flag)
         }
     }
-
 }

@@ -16,4 +16,7 @@ panic = "abort"
 panic = "abort"
 
 [build-dependencies]
-cargo-5730 = { git = "ssh://github.com/auxoncorp/cargo-5730", branch = "master" }
+cargo-5730 = "0.2"
+
+[workaround-build-dependencies]
+selfe-arc = { path = "../selfe-arc" }
