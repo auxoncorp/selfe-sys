@@ -138,7 +138,6 @@ mod workaround_build {
 
     fn load_bitfields_toml() -> Vec<BitfieldType> {
         println!("cargo:rerun-if-changed=codegen/bitfields.toml");
-        println!("heeeeeeeeeeeeeeey");
         let bitfields_toml_str = std::fs::read_to_string("codegen/bitfields.toml")
             .expect("Can't read codegen/bitfields.toml");
 
