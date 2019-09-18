@@ -23,10 +23,7 @@ extern crate selfe_sys;
 
 pub use selfe_runtime::debug::DebugOutHandle;
 
-#[cfg(not(test))]
-use core::alloc::Layout;
 use core::fmt::Write;
-
 use core::panic::PanicInfo;
 use selfe_sys::*;
 
@@ -102,13 +99,6 @@ pub fn debug_panic_handler(info: &PanicInfo) -> ! {
     unsafe {
         core::intrinsics::abort();
     }
-}
-
-#[lang = "oom"]
-#[no_mangle]
-#[cfg(not(test))]
-pub fn rust_oom(_layout: Layout) -> ! {
-    panic!("Root server has run out of memory!");
 }
 
 #[lang = "eh_personality"]
