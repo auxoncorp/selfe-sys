@@ -12,18 +12,18 @@
 #[naked]
 #[no_mangle]
 #[cfg(not(test))]
-/// This is the entry point to the root task image. Set up the stack, stash the boot
-/// info, then call the rust-generated main function.
+/// This is the entry point to the root task image. Set up the stack, stash the
+/// boot info, then call the rust-generated main function.
 ///
 /// The call chain from here will look like this:
 ///   sel4_start::_start ->
 ///   <rust-generated>::main() ->
 ///   sel4_start::lang_start() (start lang item) ->
 ///   <user-defined>::main()
-pub unsafe extern fn _start() -> ! {
+pub unsafe extern "C" fn _start() -> ! {
     // setup stack pointer
     // don't mess up rdi which we need next
-    asm!(
+    llvm_asm!(
         "
         /* rsp is currently bottom of stack, make it top of stack */
         addq $1, %rsp
@@ -39,10 +39,10 @@ pub unsafe extern fn _start() -> ! {
 
     // setup the global 'bootinfo' structure
     // The argument to this function has been put into rdi for us by sel4
-    asm!("call __sel4_start_init_boot_info" :::: "volatile");
+    llvm_asm!("call __sel4_start_init_boot_info" :::: "volatile");
 
     // Call main stub that rustc generates
-    asm!(
+    llvm_asm!(
         "
         /* N.B. rsp MUST be aligned to a 16-byte boundary when main is called.
          * Insert or remove padding here to make that happen.

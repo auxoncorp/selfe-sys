@@ -132,7 +132,7 @@ impl ArchiveHeader {
 
     #[cfg(feature = "std")]
     pub fn write<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
-        writer.write(&self.magic)?;
+        writer.write_all(&self.magic)?;
         writer.write_u8(self.version)?;
         writer.write_u32::<LittleEndian>(self.data_start)?;
         writer.write_u32::<LittleEndian>(self.file_count)?;
@@ -223,7 +223,7 @@ impl DirectoryEntry {
     #[cfg(feature = "std")]
     pub fn write<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
         writer.write_u8(self.name_len)?;
-        writer.write(&self.name_bytes)?;
+        writer.write_all(&self.name_bytes)?;
         writer.write_u64::<LittleEndian>(self.offset)?;
         writer.write_u64::<LittleEndian>(self.length)?;
         Ok(())

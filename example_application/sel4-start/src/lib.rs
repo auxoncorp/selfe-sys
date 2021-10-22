@@ -9,7 +9,7 @@
  */
 
 #![no_std]
-#![feature(lang_items, core_intrinsics, asm, naked_functions)]
+#![feature(lang_items, core_intrinsics, asm, naked_functions, llvm_asm)]
 #![cfg_attr(
     any(
         all(target_arch = "arm", target_pointer_width = "32"),
@@ -45,8 +45,8 @@ static ENVIRONMENT_STRING: &'static [u8] = b"seL4=1\0\0";
 #[doc(hidden)]
 static PROG_NAME: &'static [u8] = b"rootserver\0";
 
-/// The size of the initial root thread stack. This stack is located in the root task image data
-/// section.
+/// The size of the initial root thread stack. This stack is located in the root
+/// task image data section.
 pub const STACK_SIZE: usize = 1024 * 68;
 
 #[used]
@@ -71,8 +71,9 @@ impl Termination for () {
 
 #[doc(hidden)]
 #[no_mangle]
-/// Internal function which sets up the global `BOOTINFO`. Can only be called once - it sets a
-/// private flag when it is called and will not modify `BOOTINFO` if that flag is set.
+/// Internal function which sets up the global `BOOTINFO`. Can only be called
+/// once - it sets a private flag when it is called and will not modify
+/// `BOOTINFO` if that flag is set.
 pub unsafe extern "C" fn __sel4_start_init_boot_info(bootinfo: *mut seL4_BootInfo) {
     if !RUN_ONCE {
         BOOTINFO = bootinfo;
@@ -109,7 +110,8 @@ pub fn eh_personality() {
     }
 }
 
-/// Returns the address of the bottom of the stack for the initial root task thread.
+/// Returns the address of the bottom of the stack for the initial root task
+/// thread.
 pub fn get_stack_bottom_addr() -> usize {
     unsafe { (&(STACK.stack)).as_ptr() as usize }
 }
