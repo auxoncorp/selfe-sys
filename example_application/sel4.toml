@@ -36,9 +36,9 @@ root_task_image = "target/aarch64-unknown-linux-gnu/release/example"
 
 [sel4]
 # Specifically selected to support the virtualized aarch64 tx1-like platform, virt
-kernel = { git = "ssh://git@github.com/auxoncorp/seL4.git", branch = "add-virt-platform" }
-tools = { git = "ssh://git@github.com/auxoncorp/seL4_tools.git", branch = "add-virt-platform" }
-util_libs  = { git = "ssh://git@github.com/auxoncorp/util_libs.git", branch = "add-virt-platform" }
+kernel = { git = "https://github.com/auxoncorp/seL4-ferros", branch = "add-virt-platform" }
+tools = { git = "https://github.com/auxoncorp/seL4_tools-ferros", branch = "add-virt-platform" }
+util_libs  = { git = "https://github.com/auxoncorp/util_libs-ferros", branch = "add-virt-platform" }
 
 ### arch
 
