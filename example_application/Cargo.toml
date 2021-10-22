@@ -3,6 +3,7 @@ name = "example"
 version = "0.1.0"
 authors = ["Russell Mull <russell@auxon.io>", "Zachary Pierce <zack@auxon.io>"]
 edition = "2018"
+resolver = "2"
 
 [dependencies]
 sel4-start = { path = "sel4-start", features = ["panic_handler"] }
@@ -16,7 +17,4 @@ panic = "abort"
 panic = "abort"
 
 [build-dependencies]
-cargo-5730 = "0.2"
-
-[workaround-build-dependencies]
 selfe-arc = { path = "../selfe-arc" }

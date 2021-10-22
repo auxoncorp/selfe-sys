@@ -165,7 +165,7 @@ impl Archive {
 
         // initial padding
         for _ in 0..initial_padding_size {
-            writer.write(&[0])?;
+            writer.write_all(&[0])?;
         }
 
         // data
@@ -174,10 +174,10 @@ impl Archive {
             let mut buf_reader = io::BufReader::new(data_file);
             let bytes_written = io::copy(&mut buf_reader, &mut writer)?;
 
-            assert_eq!(bytes_written, f.size);
+            assert_eq!(bytes_written, f.size, "Unexpected size for {:?}", f.path);
 
             for _ in 0..f.padding {
-                writer.write(&[0])?;
+                writer.write_all(&[0])?;
             }
         }
 
@@ -255,13 +255,17 @@ mod tests {
 
     #[test]
     fn no_duplicate_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("pack_test.txt");
+
         {
-            let mut test_file = fs::File::create("/tmp/pack_test.txt").unwrap();
+            let mut test_file = fs::File::create(&f).unwrap();
             test_file.write_all(b"test").unwrap();
+            test_file.flush().unwrap();
         }
 
         let mut ar = Archive::new();
-        let res = ar.add_file("test", Path::new("/tmp/pack_test.txt"));
+        let res = ar.add_file("test", &f);
         assert_eq!(res, Ok(()));
 
         let res = ar.add_file("test", Path::new("doesn't_matter"));
@@ -278,14 +282,17 @@ mod tests {
 
     #[test]
     fn pack_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("pack_test.txt");
+
         {
-            let mut test_file = fs::File::create("/tmp/pack_test.txt").unwrap();
+            let mut test_file = fs::File::create(&f).unwrap();
             test_file.write_all(b"test").unwrap();
+            test_file.flush().unwrap();
         }
 
         let mut ar = Archive::new();
-        ar.add_file("test", Path::new("/tmp/pack_test.txt"))
-            .unwrap();
+        ar.add_file("test", &f).unwrap();
 
         let mut actual_data = Vec::new();
         {
@@ -372,21 +379,24 @@ mod tests {
     #[test]
     fn object_file() {
         use std::str;
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("pack_test.txt");
+        let elf = dir.path().join("pack_test.elf");
 
         {
-            let mut test_file = fs::File::create("/tmp/pack_test.txt").unwrap();
+            let mut test_file = fs::File::create(&f).unwrap();
             test_file.write_all(b"test").unwrap();
+            test_file.flush().unwrap();
         }
 
         let mut ar = Archive::new();
-        ar.add_file("test", Path::new("/tmp/pack_test.txt"))
-            .unwrap();
+        ar.add_file("test", &f).unwrap();
 
-        ar.write_object_file("/tmp/pack_test.elf", "ld", "x86_64")
+        ar.write_object_file(elf.to_str().unwrap(), "ld", "x86_64")
             .unwrap();
 
         let mut ld = Command::new("objdump");
-        let out = ld.arg("-t").arg("/tmp/pack_test.elf").output().unwrap();
+        let out = ld.arg("-t").arg(elf.to_str().unwrap()).output().unwrap();
         let stdout = str::from_utf8(&out.stdout).unwrap();
         assert!(stdout.contains("_selfe_arc_data_start"));
         assert!(stdout.contains("_selfe_arc_data_end"));

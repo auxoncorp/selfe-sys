@@ -13,6 +13,7 @@ documentation = "https://doc.robigalia.org/sel4_start"
 repository = "https://gitlab.com/robigalia/sel4-start"
 readme = "README.md"
 license = "MIT/Apache-2.0"
+resolver = "2"
 
 [dependencies]
 selfe-sys = { path = "../.." }

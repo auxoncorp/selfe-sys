@@ -1,7 +1,6 @@
 use super::full;
 use super::{GitTarget, RepoSource, SeL4Sources, SingleValue};
 use std::collections::BTreeMap;
-use std::error::Error;
 use std::fmt::Display;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -65,7 +64,7 @@ impl Display for ImportError {
 
 impl From<TomlDeError> for ImportError {
     fn from(tde: TomlDeError) -> Self {
-        ImportError::TomlDeserializeError(tde.description().to_owned())
+        ImportError::TomlDeserializeError(tde.to_string())
     }
 }
 

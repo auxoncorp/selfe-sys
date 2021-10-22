@@ -1,6 +1,6 @@
 ### PC99 (x64)
 [build.pc99]
-cross_compiler_prefix = ""
+cross_compiler_prefix = "x86_64-linux-gnu-"
 
 [build.pc99.debug]
 make_root_task = "cargo xbuild --target=x86_64-unknown-linux-gnu"

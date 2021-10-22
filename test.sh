@@ -7,7 +7,7 @@ toolchains_dir="${dir}/toolchains"
 mkdir -p $toolchains_dir
 
 armv7_toolchain="gcc-linaro-7.4.1-2019.02-i686_arm-linux-gnueabihf"
-armv7_toolchain_url="https://releases.linaro.org/components/toolchain/binaries/latest-7/arm-linux-gnueabihf/${armv7_toolchain}.tar.xz"
+armv7_toolchain_url="https://releases.linaro.org/components/toolchain/binaries/7.4-2019.02/arm-linux-gnueabihf/${armv7_toolchain}.tar.xz"
 armv7_toolchain_dir="${toolchains_dir}/${armv7_toolchain}"
 
 if [ ! -d "${armv7_toolchain_dir}" ]; then
@@ -21,7 +21,7 @@ else
 fi
 
 armv8_toolchain="gcc-linaro-7.4.1-2019.02-i686_aarch64-linux-gnu"
-armv8_toolchain_url="https://releases.linaro.org/components/toolchain/binaries/latest-7/aarch64-linux-gnu/${armv8_toolchain}.tar.xz"
+armv8_toolchain_url="https://releases.linaro.org/components/toolchain/binaries/7.4-2019.02/aarch64-linux-gnu/${armv8_toolchain}.tar.xz"
 armv8_toolchain_dir="${toolchains_dir}/${armv8_toolchain}"
 
 if [ ! -d "${armv8_toolchain_dir}" ]; then
@@ -34,6 +34,27 @@ else
     echo "Using existing aarch64 toolchain at ${armv8_toolchain_dir}"
 fi
 
+x86_64_toolchain="x86_64-linux-gnu-7"
+x86_64_toolchain_dir="${toolchains_dir}/${x86_64_toolchain}"
+
+if [ ! -d "${x86_64_toolchain_dir}" ]; then
+    (
+        cd $toolchains_dir
+        if [ ! -f /usr/bin/x86_64-linux-gnu-gcc-7 ]; then
+            echo "gcc-7 is missing, run sudo apt install -y gcc-7"
+            exit 1
+        fi
+        mkdir -p ${x86_64_toolchain}/bin
+        (
+            cd ${x86_64_toolchain}/bin
+            ln -s /usr/bin/x86_64-linux-gnu-gcc-7 x86_64-linux-gnu-gcc
+            ln -s /usr/bin/x86_64-linux-gnu-gcc-ar-7 x86_64-linux-gnu-gcc-ar
+            ln -s /usr/bin/x86_64-linux-gnu-gcc-nm-7 x86_64-linux-gnu-gcc-nm
+        )
+    )
+else
+    echo "Using existing x86_64 toolchain at ${x86_64_toolchain_dir}"
+fi
 
 echo "====================== run tests =================================="
 RUSTFLAGS="-C link-args=-no-pie" cargo +stable build
@@ -66,16 +87,17 @@ RUSTFLAGS="-C link-args=-no-pie" cargo +nightly test
         SEL4_PLATFORM=tx1 cargo xbuild --target aarch64-unknown-linux-gnu
     )
 
-    SEL4_PLATFORM=pc99 cargo xbuild --target=x86_64-unknown-linux-gnu
-
     (
         export PATH="${armv8_toolchain_dir}/bin:${PATH}"
         echo "++++++++++++ virt"
         SEL4_PLATFORM=virt cargo xbuild --target aarch64-unknown-linux-gnu
     )
 
-    ../selfe-config/target/debug/selfe build --sel4_arch x86_64 --platform pc99 --debug
-    ../selfe-config/target/debug/selfe build --sel4_arch x86_64 --platform pc99 --release
+    (
+        export PATH="${x86_64_toolchain_dir}/bin:${PATH}"
+        echo "++++++++++++ pc99"
+        SEL4_PLATFORM=pc99 cargo xbuild --target=x86_64-unknown-linux-gnu
+    )
 
     (
         export PATH="${armv7_toolchain_dir}/bin:${PATH}"
@@ -88,6 +110,13 @@ RUSTFLAGS="-C link-args=-no-pie" cargo +nightly test
         export PATH="${armv8_toolchain_dir}/bin:${PATH}"
         echo "++++++++++++ Virt E2E"
         ../selfe-config/target/debug/selfe build --sel4_arch aarch64 --platform virt
+    )
+
+    (
+        export PATH="${x86_64_toolchain_dir}/bin:${PATH}"
+        echo "++++++++++++ pc99"
+        ../selfe-config/target/debug/selfe build --sel4_arch x86_64 --platform pc99 --debug
+        ../selfe-config/target/debug/selfe build --sel4_arch x86_64 --platform pc99 --release
     )
 )
 

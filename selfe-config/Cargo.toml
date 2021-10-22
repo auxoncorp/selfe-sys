@@ -1,8 +1,9 @@
 [package]
 name = "selfe-config"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Russell Mull <russell@auxon.io>", "Zachary Pierce <zack@auxon.io>"]
 edition = "2018"
+resolver = "2"
 
 [features]
 default = []
@@ -17,7 +18,6 @@ name = "selfe"
 path = "src/main.rs"
 doctest = false
 required-features = ["bin"]
-
 
 [dependencies]
 toml = "0.5"

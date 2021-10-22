@@ -18,7 +18,7 @@ Add a dependency to this library in your Cargo.toml manifest:
 
 ```toml
 [dependencies]
-selfe-sys = { git = "ssh://git@github.com/auxoncorp/selfe-sys.git" }
+selfe-sys = { git = "https://github.com/auxoncorp/selfe-sys.git" }
 ```
 
 And then in your Rust project:
@@ -71,7 +71,7 @@ Starting from a regular Rust toolchain, install the build tools.
 
 ```
 cargo install cargo-xbuild
-cargo install --git ssh://git@github.com/auxoncorp/selfe-sys.git selfe-config --bin selfe --features bin --force
+cargo install --git https://github.com/auxoncorp/selfe-sys selfe-config --bin selfe --features bin --force
 ```
 
 Note that Python, CMake, Ninja, QEMU, and others are lurking as indirect dependencies for seL4.
