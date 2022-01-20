@@ -305,6 +305,7 @@ pub mod full {
     #[derive(Debug, Clone, PartialEq)]
     pub struct SeL4 {
         pub sources: SeL4Sources,
+	pub build_dir: Option<PathBuf>,
         pub config: Config,
     }
 
@@ -323,8 +324,8 @@ pub mod full {
     }
 
     impl SeL4 {
-        pub fn new(sources: SeL4Sources, config: Config) -> Self {
-            SeL4 { sources, config }
+        pub fn new(sources: SeL4Sources, build_dir: Option<PathBuf>, config: Config) -> Self {
+            SeL4 { sources, build_dir, config }
         }
     }
 
@@ -368,6 +369,7 @@ pub mod contextualized {
     #[derive(Debug, Clone, PartialEq, Hash)]
     pub struct Contextualized {
         pub sel4_sources: SeL4Sources,
+	pub build_dir: Option<PathBuf>,
         pub context: Context,
         pub sel4_config: BTreeMap<String, SingleValue>,
         pub build: Build,
@@ -487,9 +489,11 @@ pub mod contextualized {
             let metadata = resolve_context(&f.metadata, &context);
 
             let sel4_sources = f.sel4.sources.relative_to(&context.base_dir);
+	    let build_dir = f.sel4.build_dir.clone();
 
             Ok(Contextualized {
                 sel4_sources,
+		build_dir,
                 context,
                 sel4_config,
                 build,
@@ -513,6 +517,7 @@ mod tests {
                         tools: RepoSource::LocalPath(PathBuf::from(".")),
                         util_libs: RepoSource::LocalPath(PathBuf::from(".")),
                     },
+		    build_dir: None,
                     config: Default::default(),
                 },
                 build: Default::default(),

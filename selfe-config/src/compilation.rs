@@ -173,6 +173,19 @@ pub fn build_sel4(
     config: &model::contextualized::Contextualized,
     build_mode: SeL4BuildMode,
 ) -> SeL4BuildOutcome {
+    if let Some(ref build_dir) = config.build_dir {
+	match build_mode {
+	    SeL4BuildMode::Lib => {
+		return SeL4BuildOutcome::StaticLib {
+		    build_dir: build_dir.to_path_buf()
+		}
+	    },
+	    SeL4BuildMode::Kernel => {
+		panic!("Kernel build not supported when build_dir is provided");
+	    }
+	}
+    }
+
     let cmake_lists_content = match build_mode {
         SeL4BuildMode::Kernel => CMAKELISTS_KERNEL,
         SeL4BuildMode::Lib => CMAKELISTS_LIB,

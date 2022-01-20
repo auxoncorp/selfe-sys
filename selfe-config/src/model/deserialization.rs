@@ -19,6 +19,7 @@ pub(crate) struct RawSeL4 {
     pub(crate) kernel: TomlTable,
     pub(crate) tools: TomlTable,
     pub(crate) util_libs: TomlTable,
+    pub(crate) build_dir: Option<PathBuf>,
     pub(crate) config: BTreeMap<String, TomlValue>,
 }
 
@@ -83,6 +84,7 @@ impl FromStr for Raw {
             let kernel = parse_required_table(table, "kernel")?;
             let tools = parse_required_table(table, "tools")?;
             let util_libs = parse_required_table(table, "util_libs")?;
+            let build_dir = parse_optional_string(table, "build_dir")?.map(PathBuf::from);
 
             let mut config = BTreeMap::new();
             if let Some(config_val) = table.get("config") {
@@ -102,6 +104,7 @@ impl FromStr for Raw {
                 kernel,
                 tools,
                 util_libs,
+                build_dir,
                 config,
             })
         }
@@ -269,6 +272,7 @@ impl FromStr for full::Full {
         Ok(full::Full {
             sel4: full::SeL4 {
                 sources,
+		build_dir: sel4.build_dir,
                 config: structure_property_tree(sel4.config)?,
             },
             build: build.unwrap_or_else(BTreeMap::new),
