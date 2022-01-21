@@ -1,8 +1,15 @@
 [package]
 name = "selfe-sys"
 version = "0.1.1"
-authors = ["Russell Mull <russell@auxon.io>", "Zachary Pierce <zack@auxon.io>"]
+authors = [
+    "Russell Mull <russell@auxon.io>",
+    "Zachary Pierce <zack@auxon.io>",
+    "Jon Lamb <jon@auxon.io>"]
 edition = "2018"
+readme = "README.md"
+description = "A generated thin wrapper around libsel4.a, with supporting subcrates"
+repository = "https://github.com/auxoncorp/selfe-sys"
+license-file = "LICENSE"
 resolver = "2"
 
 [lib]

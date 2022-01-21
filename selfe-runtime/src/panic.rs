@@ -9,7 +9,5 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 /// This is a separate function so there's a clean place to set an abort
 /// breakpoint, for debug builds.
 fn abort() -> ! {
-    unsafe {
-        core::intrinsics::abort();
-    }
+    core::intrinsics::abort();
 }

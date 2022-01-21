@@ -40,7 +40,13 @@ pub mod ctypes {
     pub type c_ulong = u64;
 }
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+// bindgen generated tests, https://github.com/rust-lang/rust-bindgen/issues/1651
+#[allow(deref_nullptr)]
+mod bindings {
+    use super::*;
+    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+}
+pub use bindings::*;
 
 #[cfg(test)]
 include!(concat!(env!("OUT_DIR"), "/generated_tests.rs"));

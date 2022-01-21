@@ -3,6 +3,10 @@ name = "selfe-config"
 version = "0.2.1"
 authors = ["Russell Mull <russell@auxon.io>", "Zachary Pierce <zack@auxon.io>"]
 edition = "2018"
+readme = "README.md"
+description = "A seL4 configuration format, managed by a library"
+repository = "https://github.com/auxoncorp/selfe-sys"
+license-file = "../LICENSE"
 resolver = "2"
 
 [features]
