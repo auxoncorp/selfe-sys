@@ -3,6 +3,10 @@ name = "selfe-arc"
 version = "0.1.1"
 authors = ["Russell Mull <russell@auxon.io>"]
 edition = "2018"
+readme = "README.md"
+description = "A simple file archive library, useful for bundling process binaries and configuration files with your seL4 application"
+repository = "https://github.com/auxoncorp/selfe-sys"
+license-file = "../LICENSE"
 resolver = "2"
 
 [dependencies]

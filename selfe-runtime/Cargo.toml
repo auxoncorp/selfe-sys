@@ -3,6 +3,9 @@ name = "selfe-runtime"
 version = "0.1.1"
 authors = ["Russell Mull <russell@auxon.io>"]
 edition = "2018"
+description = "A tiny runtime library, required for any process which uses libsel4.a"
+repository = "https://github.com/auxoncorp/selfe-sys"
+license-file = "../LICENSE"
 resolver = "2"
 
 [dependencies]
