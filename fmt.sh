@@ -12,7 +12,7 @@ cargo fmt
 )
 
 (
-    cd example_application/sel4-start
+    cd example_application/selfe-start
     cargo fmt
 )
 

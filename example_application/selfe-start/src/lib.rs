@@ -34,7 +34,7 @@ struct Stack {
     stack: [u8; STACK_SIZE],
 }
 
-pub static mut BOOTINFO: *mut seL4_BootInfo = (0 as *mut seL4_BootInfo);
+pub static mut BOOTINFO: *mut seL4_BootInfo = 0 as *mut seL4_BootInfo;
 static mut RUN_ONCE: bool = false;
 
 #[used]
@@ -105,9 +105,7 @@ pub fn debug_panic_handler(info: &PanicInfo) -> ! {
 #[lang = "eh_personality"]
 #[cfg(not(test))]
 pub fn eh_personality() {
-    unsafe {
-        core::intrinsics::abort();
-    }
+    core::intrinsics::abort();
 }
 
 /// Returns the address of the bottom of the stack for the initial root task

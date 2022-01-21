@@ -1,8 +1,8 @@
 #![no_std]
 
 use core::fmt::Write;
-use sel4_start::{self, DebugOutHandle};
 use selfe_arc;
+use selfe_start::{self, DebugOutHandle};
 use selfe_sys::{seL4_BootInfo, seL4_CapInitThreadTCB, seL4_TCB_Suspend};
 
 extern "C" {
@@ -20,7 +20,7 @@ fn main() {
 
     writeln!(DebugOutHandle, "\n\nHello {} world!\n\n", arch).unwrap();
 
-    let bootinfo: &'static seL4_BootInfo = unsafe { &*sel4_start::BOOTINFO };
+    let bootinfo: &'static seL4_BootInfo = unsafe { &*selfe_start::BOOTINFO };
     let num_nodes = bootinfo.numNodes; // Pull out a reference to resolve packed-struct misalignment risk
     writeln!(
         DebugOutHandle,

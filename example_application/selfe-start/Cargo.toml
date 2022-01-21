@@ -5,7 +5,7 @@
 # project carrying such notice may not be copied, modified, or distributed
 # except according to those terms.
 [package]
-name = "sel4-start"
+name = "selfe-start"
 version = "0.0.28"
 authors = ["Corey Richardson <corey@octayn.net>", "Russell Mull <russell@auxon.io>", "Zachary Pierce <zack@auxon.io>"]
 description = "Crate defining the entry point to the initial thread on seL4"

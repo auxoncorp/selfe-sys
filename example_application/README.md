@@ -1,7 +1,7 @@
 # example
 
 An example seL4 application which uses [selfe-sys](../README.md)
-to make syscalls and [sel4-start](./sel4-start/README.md) to bridge the gap between
+to make syscalls and [selfe-start](./selfe-start/README.md) to bridge the gap between
 a bare-bones Rust `#[no_std]` application and one that will work on the seL4 microkernel.
 
 ## Highlights
@@ -24,22 +24,22 @@ Note also the presence of a selected linker to support the cross-compilation-for
 use case.
 
 ### Dependencies
-Note that `selfe-sys` and `sel4-start` are included as regular Cargo.toml dependencies.
+Note that `selfe-sys` and `selfe-start` are included as regular Cargo.toml dependencies.
 
 ### Language Items
 
 In order to let application-builders pick the level of secrecy they want around their failure
 cases, [main.rs](src/main.rs) defines a `#[panic_handler]` implementation (albeit one that
-immediately delegates to an optional helper from `sel4-start`)
+immediately delegates to an optional helper from `selfe-start`)
 
 ### Boot Info
 
-`sel4-start` exposes to the root task a static `sel4_start::BOOTINFO` item
+`selfe-start` exposes to the root task a static `selfe_start::BOOTINFO` item
 that represents the kernel-supplied `seL4_BootInfo` instance from which
 most information necessary to work with seL4 can derived.
 
 ```root
-    let bootinfo: &'static seL4_BootInfo = unsafe { &*sel4_start::BOOTINFO };
+    let bootinfo: &'static seL4_BootInfo = unsafe { &*selfe_start::BOOTINFO };
     // Do work with the boot info instance here
 ```
 

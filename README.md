@@ -7,7 +7,7 @@ A generated thin wrapper around libsel4.a, with supporting subcrates.
 * [selfe-config](selfe-config) is a build dependency library that defines a seL4 configuration format (sel4.toml) and utilities for building seL4 with that config
   * Also includes a binary tool, `selfe` for building seL4 applications with the help of a sel4.toml config file
 * [example_application](example_application) is a Rust seL4 application that depends on `selfe-sys` for access to syscalls. It can be built/run independently or with `selfe`.
-* [sel4-start](sel4-start) is a library that defines Rust lang-items required for `no_std` Rust-based root tasks on seL4.
+* [selfe-start](example_application/selfe-start) is a library that defines Rust lang-items required for `no_std` Rust-based root tasks on seL4.
 * [selfe-runtime](selfe-runtime) is a tiny runtime library, required for any process which uses libsel4.a.
 
 See the READMEs of the subdirectories for more detailed explanations.
