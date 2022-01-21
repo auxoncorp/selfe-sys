@@ -7,7 +7,7 @@ resolver = "2"
 
 [dependencies]
 sel4-start = { path = "sel4-start", features = ["panic_handler"] }
-selfe-sys = { path = ".." }
+selfe-sys = "0.1"
 selfe-arc = { version = "0.1", default-features = false }
 
 [profile.dev]

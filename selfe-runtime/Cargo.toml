@@ -9,7 +9,7 @@ license-file = "../LICENSE"
 resolver = "2"
 
 [dependencies]
-selfe-sys = { path = ".." }
+selfe-sys = "0.1"
 
 [build-dependencies]
 selfe-config = "0.2"

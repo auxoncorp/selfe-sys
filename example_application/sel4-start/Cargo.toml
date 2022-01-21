@@ -16,8 +16,8 @@ license = "MIT/Apache-2.0"
 resolver = "2"
 
 [dependencies]
-selfe-sys = { path = "../.." }
-selfe-runtime = { path = "../../selfe-runtime" }
+selfe-sys = "0.1"
+selfe-runtime = "0.1"
 
 [build-dependencies]
 selfe-config = "0.2"
