@@ -19,7 +19,7 @@ name = "selfe_sys"
 
 [build-dependencies]
 bindgen = { version = "0.52", default-features = false }
-selfe-config = { path = "./selfe-config" }
+selfe-config = "0.2"
 quote = "0.6"
 toml = "0.5"
 proc-macro2 = "0.4"

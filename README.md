@@ -18,7 +18,7 @@ Add a dependency to this library in your Cargo.toml manifest:
 
 ```toml
 [dependencies]
-selfe-sys = { git = "https://github.com/auxoncorp/selfe-sys.git" }
+selfe-sys = "0.1"
 ```
 
 And then in your Rust project:
@@ -54,7 +54,7 @@ from [libsel4](https://github.com/seL4/seL4/tree/master/libsel4).
 
 The majority of these bindings are generated with [bindgen](https://github.com/rust-lang/rust-bindgen)
 from the seL4 kernel source specified in the project's relevant sel4.toml, as managed by
-[selfe-config](../selfe-config/README.md). The exact contents of the `sel4-sys` package
+[selfe-config](selfe-config/README.md). The exact contents of the `sel4-sys` package
 will depend on the configuration flags set in that sel4.toml file, as they affect
 the headers in seL4 used as input to the binding generation.
 
@@ -71,7 +71,7 @@ Starting from a regular Rust toolchain, install the build tools.
 
 ```
 cargo install cargo-xbuild
-cargo install --git https://github.com/auxoncorp/selfe-sys selfe-config --bin selfe --features bin --force
+cargo install selfe-config --bin selfe --features bin --force
 ```
 
 Note that Python, CMake, Ninja, QEMU, and others are lurking as indirect dependencies for seL4.

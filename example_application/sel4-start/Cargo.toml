@@ -20,7 +20,7 @@ selfe-sys = { path = "../.." }
 selfe-runtime = { path = "../../selfe-runtime" }
 
 [build-dependencies]
-selfe-config = { path = "../../selfe-config" }
+selfe-config = "0.2"
 
 [features]
 default = []

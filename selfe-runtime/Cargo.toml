@@ -12,7 +12,7 @@ resolver = "2"
 selfe-sys = { path = ".." }
 
 [build-dependencies]
-selfe-config = { path = "../selfe-config" }
+selfe-config = "0.2"
 
 [features]
 default = []
