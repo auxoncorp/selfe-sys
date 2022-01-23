@@ -60,7 +60,7 @@ impl BuildEnv {
         let cargo_cfg_target_arch = get_env("CARGO_CFG_TARGET_ARCH");
 
         BuildEnv {
-            cargo_cfg_target_arch: cargo_cfg_target_arch.clone(),
+            cargo_cfg_target_arch,
             cargo_cfg_target_pointer_width: get_env("CARGO_CFG_TARGET_POINTER_WIDTH")
                 .parse()
                 .expect("Could not parse CARGO_CFG_TARGET_POINTER_WIDTH as an unsigned integer"),
@@ -152,7 +152,7 @@ pub fn load_config_from_env_or_default() -> model::contextualized::Contextualize
         sel4_arch,
         profile.is_debug(),
         platform,
-        config_dir.as_ref().map(PathBuf::as_path),
+        config_dir.as_deref(),
     )
     .expect("Error resolving config file")
 }

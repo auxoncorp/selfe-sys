@@ -225,8 +225,8 @@ impl Display for Arch {
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Platform(pub String);
 impl Display for Platform {
-    fn fmt(&self, mut f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(&mut f)
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
 
@@ -420,13 +420,13 @@ pub mod contextualized {
             base_dir: Option<&Path>,
         ) -> Result<Contextualized, ImportError> {
             let context = Context {
-                platform: platform.clone(),
+                platform,
                 arch,
                 sel4_arch,
                 is_debug,
                 base_dir: base_dir.map(Path::to_path_buf),
             };
-            Contextualized::from_full_context(&f, context)
+            Contextualized::from_full_context(f, context)
         }
 
         pub fn from_full_context(

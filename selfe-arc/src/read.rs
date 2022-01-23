@@ -27,8 +27,8 @@ impl<'a> Iterator for DirectoryEntryIterator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.remaining_files > 0 {
-            let entry = DirectoryEntry::read(&self.data);
-            self.remaining_files = self.remaining_files - 1;
+            let entry = DirectoryEntry::read(self.data);
+            self.remaining_files -= 1;
             self.data = &self.data[DirectoryEntry::serialized_size()..];
             Some(entry)
         } else {
@@ -77,7 +77,7 @@ impl<'a> Archive<'a> {
             }
         }
 
-        let dir_entry = dir_entry.ok_or_else(|| ReadError::FileNotFound)?;
+        let dir_entry = dir_entry.ok_or(ReadError::FileNotFound)?;
         let header = self.header()?;
         let data_slice = &self.0[header.data_start as usize..];
         Ok(&data_slice

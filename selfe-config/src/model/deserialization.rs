@@ -275,7 +275,7 @@ impl FromStr for full::Full {
 		build_dir: sel4.build_dir,
                 config: structure_property_tree(sel4.config)?,
             },
-            build: build.unwrap_or_else(BTreeMap::new),
+            build: build.unwrap_or_default(),
             metadata: structure_property_tree(metadata)?,
         })
     }
@@ -338,15 +338,15 @@ fn parse_repo_source(table: &TomlTable) -> Result<RepoSource, ImportError> {
         match (branch, tag, rev) {
             (Some(b), None, None) => Ok(RepoSource::RemoteGit {
                 url,
-                target: GitTarget::Branch(b.to_owned()),
+                target: GitTarget::Branch(b),
             }),
             (None, Some(t), None) => Ok(RepoSource::RemoteGit {
                 url,
-                target: GitTarget::Tag(t.to_owned()),
+                target: GitTarget::Tag(t),
             }),
             (None, None, Some(r)) => Ok(RepoSource::RemoteGit {
                 url,
-                target: GitTarget::Rev(r.to_owned()),
+                target: GitTarget::Rev(r),
             }),
             _ => Err(ImportError::MissingProperty {
                 name: "branch or tag or rev".to_string(),
@@ -414,8 +414,8 @@ fn structure_property_tree(
 
     Ok(full::PropertiesTree {
         shared,
-        debug: debug.unwrap_or_else(BTreeMap::new),
-        release: release.unwrap_or_else(BTreeMap::new),
+        debug: debug.unwrap_or_default(),
+        release: release.unwrap_or_default(),
         contextual,
     })
 }

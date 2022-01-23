@@ -11,11 +11,9 @@ where
 {
     let mut archive = pack::Archive::new();
     for (name, path) in named_files {
-        archive.add_file(name, &path).expect(&format!(
-            "Error adding file {} from path {} to archive",
+        archive.add_file(name, &path).unwrap_or_else(|_| panic!("Error adding file {} from path {} to archive",
             name,
-            path.display()
-        ));
+            path.display()));
     }
 
     // rustc links with gcc; we need ld proper

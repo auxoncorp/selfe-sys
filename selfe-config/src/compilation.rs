@@ -250,7 +250,7 @@ pub fn build_sel4(
         .arg("Ninja")
         .arg(".")
         .current_dir(&build_dir)
-        .env("SEL4_TOOLS_DIR", tools_dir.to_owned());
+        .env("SEL4_TOOLS_DIR", tools_dir);
 
     if build_mode == SeL4BuildMode::Kernel {
         let rti = PathBuf::from(
