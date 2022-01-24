@@ -28,3 +28,8 @@ cc = "1.0"
 
 [dev-dependencies]
 proptest = "0.9.2"
+
+[features]
+default = ["nano_libc"]
+nano_libc = []
+

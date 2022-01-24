@@ -23,7 +23,7 @@ use quote::quote;
 extern crate itertools;
 use itertools::Itertools;
 
-const BLACKLIST_ITEMS: &'static [&'static str] = &[
+const BLACKLIST_ITEMS: &[&str] = &[
     "seL4_CPtr",
     "seL4_Word",
     "seL4_Int8",
@@ -37,7 +37,7 @@ const BLACKLIST_ITEMS: &'static [&'static str] = &[
     "seL4_WordBits",
 ];
 
-const BUILD_INCLUDE_DIRS: &'static [&'static str] = &[
+const BUILD_INCLUDE_DIRS: &[&str] = &[
     "libsel4/include",
     "libsel4/autoconf",
     "kernel/gen_config",
@@ -46,7 +46,7 @@ const BUILD_INCLUDE_DIRS: &'static [&'static str] = &[
     "libsel4/sel4_arch_include/$SEL4_ARCH$",
 ];
 
-const KERNEL_INCLUDE_DIRS: &'static [&'static str] = &[
+const KERNEL_INCLUDE_DIRS: &[&str] = &[
     "libsel4/include",
     "libsel4/arch_include/$ARCH$",
     "libsel4/sel4_arch_include/$SEL4_ARCH$",
@@ -263,7 +263,7 @@ fn gen_bitfield_test(bf: &BitfieldType) -> TokenStream {
     let field_name_tuples_code = field_names_in_tens
         .into_iter()
         .map(|chunk| quote! {(#(#chunk),*)});
-    let gen_params_fn_code = if field_names.len() > 0 {
+    let gen_params_fn_code = if !field_names.is_empty() {
         quote! {
             #[allow(unused_parens)]
             fn #gen_params_fn() -> impl Strategy<Value = #param_struct_name> {
@@ -488,13 +488,15 @@ fn main() {
     );
 
     // Build the libc stubs
-    let mut build = cc::Build::new();
-    build.file("src/nano_libc.c");
-    if config.sel4_config.get("KernelPrinting")
-        == Some(&selfe_config::model::SingleValue::Boolean(true))
-    {
-        build.define("KernelPrinting", None);
-    }
+    if cfg!(feature = "nano_libc") {
+	let mut build = cc::Build::new();
+	build.file("src/nano_libc.c");
+	if config.sel4_config.get("KernelPrinting")
+            == Some(&selfe_config::model::SingleValue::Boolean(true))
+	{
+            build.define("KernelPrinting", None);
+	}
 
-    build.compile("nano_libc");
+	build.compile("nano_libc");
+    }
 }

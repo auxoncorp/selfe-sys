@@ -53,7 +53,7 @@ path = './deps/util_libs'
 fn reads_from_external_default_file_okay() {
     let toml_content = include_str!("../src/default_config.toml");
     let f: full::Full = toml_content.parse().expect("could not read toml");
-    assert!(f.sel4.config.shared.len() > 0);
+    assert!(!f.sel4.config.shared.is_empty());
 }
 
 #[test]
@@ -311,6 +311,6 @@ fn assert_contains_int(map: &BTreeMap<String, SingleValue>, key: &str, val: i64)
     assert_eq!(
         &SingleValue::Integer(val),
         map.get(key)
-            .expect(&format!("Did not contain expected key {}", key))
+            .unwrap_or_else(|| panic!("Did not contain expected key {}", key))
     );
 }

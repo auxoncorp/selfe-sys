@@ -19,6 +19,7 @@ pub(crate) struct RawSeL4 {
     pub(crate) kernel: TomlTable,
     pub(crate) tools: TomlTable,
     pub(crate) util_libs: TomlTable,
+    pub(crate) build_dir: Option<PathBuf>,
     pub(crate) config: BTreeMap<String, TomlValue>,
 }
 
@@ -83,6 +84,7 @@ impl FromStr for Raw {
             let kernel = parse_required_table(table, "kernel")?;
             let tools = parse_required_table(table, "tools")?;
             let util_libs = parse_required_table(table, "util_libs")?;
+            let build_dir = parse_optional_string(table, "build_dir")?.map(PathBuf::from);
 
             let mut config = BTreeMap::new();
             if let Some(config_val) = table.get("config") {
@@ -102,6 +104,7 @@ impl FromStr for Raw {
                 kernel,
                 tools,
                 util_libs,
+                build_dir,
                 config,
             })
         }
@@ -269,9 +272,10 @@ impl FromStr for full::Full {
         Ok(full::Full {
             sel4: full::SeL4 {
                 sources,
+		build_dir: sel4.build_dir,
                 config: structure_property_tree(sel4.config)?,
             },
-            build: build.unwrap_or_else(BTreeMap::new),
+            build: build.unwrap_or_default(),
             metadata: structure_property_tree(metadata)?,
         })
     }
@@ -334,15 +338,15 @@ fn parse_repo_source(table: &TomlTable) -> Result<RepoSource, ImportError> {
         match (branch, tag, rev) {
             (Some(b), None, None) => Ok(RepoSource::RemoteGit {
                 url,
-                target: GitTarget::Branch(b.to_owned()),
+                target: GitTarget::Branch(b),
             }),
             (None, Some(t), None) => Ok(RepoSource::RemoteGit {
                 url,
-                target: GitTarget::Tag(t.to_owned()),
+                target: GitTarget::Tag(t),
             }),
             (None, None, Some(r)) => Ok(RepoSource::RemoteGit {
                 url,
-                target: GitTarget::Rev(r.to_owned()),
+                target: GitTarget::Rev(r),
             }),
             _ => Err(ImportError::MissingProperty {
                 name: "branch or tag or rev".to_string(),
@@ -410,8 +414,8 @@ fn structure_property_tree(
 
     Ok(full::PropertiesTree {
         shared,
-        debug: debug.unwrap_or_else(BTreeMap::new),
-        release: release.unwrap_or_else(BTreeMap::new),
+        debug: debug.unwrap_or_default(),
+        release: release.unwrap_or_default(),
         contextual,
     })
 }

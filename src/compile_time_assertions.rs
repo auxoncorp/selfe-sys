@@ -321,13 +321,6 @@ mod x86_shared_compile_time_assertions {
     const X86_PAGE_UNMAP: unsafe extern "C" fn(_service: seL4_X86_Page) -> seL4_Error =
         seL4_X86_Page_Unmap;
 
-    const X86_PAGE_REMAP: unsafe extern "C" fn(
-        _service: seL4_X86_Page,
-        vspace: seL4_CPtr,
-        rights: seL4_CapRights,
-        attr: seL4_X86_VMAttributes,
-    ) -> seL4_Error = seL4_X86_Page_Remap;
-
     const X86_PAGE_GETADDRESS: unsafe extern "C" fn(
         _service: seL4_X86_Page,
     ) -> seL4_X86_Page_GetAddress_t = seL4_X86_Page_GetAddress;
@@ -444,12 +437,6 @@ mod arm_specific_compile_time_assertions {
         rights: seL4_CapRights_t,
         attr: seL4_ARM_VMAttributes,
     ) -> seL4_Error = seL4_ARM_Page_Map;
-    const ARM_PAGE_REMAP: unsafe extern "C" fn(
-        _service: seL4_ARM_Page,
-        vspace: seL4_CPtr,
-        rights: seL4_CapRights_t,
-        attr: seL4_ARM_VMAttributes,
-    ) -> seL4_Error = seL4_ARM_Page_Remap;
     const ARM_PAGE_UNIFY_INSTRUCTION: unsafe extern "C" fn(
         _service: seL4_ARM_Page,
         start_offset: seL4_Word,

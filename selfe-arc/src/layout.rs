@@ -21,7 +21,7 @@ mod read {
     use core::convert::TryInto;
 
     pub(super) fn read_u8(buf: &[u8]) -> Result<u8, ReadError> {
-        if buf.len() < 1 {
+        if buf.is_empty() {
             Err(ReadError::BufferTooShort)
         } else {
             Ok(buf[0])
